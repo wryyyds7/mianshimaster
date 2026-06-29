@@ -1,0 +1,161 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions      Session[]
+  knowledgeItems KnowledgeItem[]
+  apiConfigs    ApiConfig[]
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model ApiConfig {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  provider    String   @db.VarChar(50)
+  apiKey      String   @map("api_key") @db.VarChar(512)
+  baseUrl     String   @map("base_url") @db.VarChar(255)
+  model       String   @db.VarChar(100)
+  temperature Float    @default(0.7)
+  maxTokens   Int      @default(4096) @map("max_tokens")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("api_configs")
+}
+
+model Session {
+  id        String        @id @default(uuid())
+  userId    String        @map("user_id")
+  title     String        @db.VarChar(255)
+  status    SessionStatus @default(ACTIVE)
+  startedAt DateTime      @map("started_at")
+  endedAt   DateTime?     @map("ended_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  user            User             @relation(fields: [userId], references: [id])
+  backgroundFiles BackgroundFile[]
+  questions       Question[]
+
+  @@index([userId, startedAt])
+  @@map("sessions")
+}
+
+enum SessionStatus {
+  ACTIVE
+  ENDED
+}
+
+model BackgroundFile {
+  id          String   @id @default(uuid())
+  sessionId   String   @map("session_id")
+  fileName    String   @map("file_name") @db.VarChar(255)
+  fileType    String   @map("file_type") @db.VarChar(50)
+  fileSize    Int      @map("file_size")
+  contentText String   @map("content_text") @db.Text
+  filePath    String   @map("file_path") @db.VarChar(500)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  session Session @relation(fields: [sessionId], references: [id])
+
+  @@map("background_files")
+}
+
+model Question {
+  id         String         @id @default(uuid())
+  sessionId  String         @map("session_id")
+  askerId    String         @map("asker_id") @db.VarChar(64)
+  title      String         @db.VarChar(255)
+  content    String         @db.Text
+  priority   Int            @default(0)
+  status     QuestionStatus @default(PENDING)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  answeredAt DateTime?      @map("answered_at")
+
+  session Session  @relation(fields: [sessionId], references: [id])
+  answers Answer[]
+
+  @@index([sessionId, priority, createdAt])
+  @@map("questions")
+}
+
+enum QuestionStatus {
+  PENDING
+  ANSWERING
+  ANSWERED
+  CANCELLED
+}
+
+model Answer {
+  id         String   @id @default(uuid())
+  questionId String   @map("question_id")
+  content    String   @db.Text
+  model      String   @db.VarChar(100)
+  tokensUsed Int?     @map("tokens_used")
+  duration   Int?
+  isStreamed Boolean  @default(true) @map("is_streamed")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@map("answers")
+}
+
+model KnowledgeItem {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  title      String   @db.VarChar(255)
+  content    String   @db.Text
+  category   String   @db.VarChar(100)
+  tags       String[] @db.VarChar(50)[]
+  sourceFile String?  @map("source_file") @db.VarChar(255)
+  isPublic   Boolean  @default(false) @map("is_public")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, category])
+  @@map("knowledge_items")
+}
+
+model Feedback {
+  id         String       @id @default(uuid())
+  userId     String?      @map("user_id")
+  type       FeedbackType
+  title      String       @db.VarChar(255)
+  content    String       @db.Text
+  contact    String?      @db.VarChar(255)
+  isResolved Boolean      @default(false) @map("is_resolved")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  @@map("feedbacks")
+}
+
+enum FeedbackType {
+  BUG
+  FEATURE
+  QUESTION
+  OTHER
+}
