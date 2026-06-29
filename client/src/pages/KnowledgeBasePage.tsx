@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import Modal from '../components/ui/Modal';
 import KnowledgeEditor from '../components/knowledge/KnowledgeEditor';
-import { Plus, Search, Edit, Trash2, BookOpen, Tag, FolderTree, ChevronRight } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, BookOpen, FolderTree } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
 import type { IKnowledgeItem } from '@shared/types';

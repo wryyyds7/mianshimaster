@@ -7,7 +7,7 @@ import FileUploader from '../components/workspace/FileUploader';
 import QuestionList from '../components/workspace/QuestionList';
 import ChatDetail from '../components/workspace/ChatDetail';
 import { aiService } from '../services/aiService';
-import { LogOut, Upload, FileText, AlertCircle } from 'lucide-react';
+import { LogOut, Upload, FileText } from 'lucide-react';
 import type { IFileInfo } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -71,9 +71,13 @@ export default function WorkspacePage() {
       (error) => {
         cancelStreaming();
         console.error('AI回答失败:', error);
-      }
-    );
-  }, [apiMode, localApi, serverApi, contextText, addQuestion, startStreaming, appendStreamChunk, endStreaming, cancelStreaming]);
+      },
+    ).catch((err) => {
+      // 捕获未被内部回调处理的异常
+      console.error('AI流式对话未预期错误:', err);
+      if (isStreaming) cancelStreaming();
+    });
+  }, [apiMode, localApi, serverApi, contextText, isStreaming, addQuestion, startStreaming, appendStreamChunk, endStreaming, cancelStreaming]);
 
   // 入口界面（未进入工作台时）
   if (!isActive) {

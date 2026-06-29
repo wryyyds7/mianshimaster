@@ -75,9 +75,9 @@ class AIService {
       }
 
       onComplete(fullText);
-    } catch (err: any) {
-      if (err.name === 'AbortError') return;
-      onError(err);
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return;
+      onError(err instanceof Error ? err : new Error(String(err)));
     } finally {
       this.abortController = null;
     }
