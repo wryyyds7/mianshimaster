@@ -282,3 +282,28 @@ main          ← 生产分支（受保护）
 | 会话历史 | localStorage (mianshimaster-sessions) | ✅ persist中间件 |
 | 知识库 | localStorage (mianshimaster-knowledge) | ✅ persist中间件 |
 | 临时会话状态 | React内存 | ❌ 关闭丢失（退出时自动保存到historySessions） |
+
+### 2026年6月30日 - 服务连接与页面完整性修复
+
+**修复的服务连接致命Bug（3个）：**
+- ✅ `api.ts` 新增命名导出 `{ api }`，解决 `authService.ts` 中 `import { api }` 导入报错问题
+- ✅ `authService.ts` 完全重写：`login()` 参数从 `{ email }` 修正为 `{ username, password }`（与服务端一致）；响应字段从 `accessToken` 修正为 `token`（与服务端一致）；增加 `code` 校验逻辑
+- ✅ `LoginPage.tsx` 使用新的 `setServerUrl()` 方法实时更新 configStore 服务器地址，确保 api 拦截器能读取正确的 baseURL
+
+**修复的状态持久化问题：**
+- ✅ `configStore.ts` persist 配置中 `serverApi.isLoggedIn`、`token`、`user` 字段改为持久化，刷新页面后保持登录状态
+
+**新增功能：**
+- ✅ `AppLayout.tsx` 侧边栏新增服务器连接状态指示器（点击验证 `/health` 端点，绿/红/灰三色图标）
+- ✅ `AppLayout.tsx` 侧边栏新增登出按钮（服务器登录后可见）
+- ✅ `SettingsPage.tsx` 服务器地址输入框 `onBlur` 时实时更新到 configStore
+- ✅ `ContactPage.tsx` 反馈表单接入真实 API（服务器模式 `/api/feedback`），支持 loading/error/success 三态
+- ✅ `ContactPage.tsx` FAQ 新增"如何连接我的服务器"条目
+
+**服务器连接链路完整说明：**
+```
+用户输入服务器地址 → LoginPage.setServerUrl() → configStore.serverApi.baseUrl
+→ api.ts 拦截器读取 baseUrl → axios 发起请求时的 config.baseURL = serverApi.baseUrl
+→ 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
+```
+

@@ -1,14 +1,9 @@
 import { api } from './api';
+import type { IUser } from '@shared/types';
 
 interface LoginResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    username: string;
-    email: string;
-    role: string;
-  };
+  token: string;
+  user: IUser;
 }
 
 interface RegisterResponse {
@@ -18,11 +13,15 @@ interface RegisterResponse {
 }
 
 export const authService = {
+  /** 登录 — 服务端期望 { username, password }，返回 { token, user } */
   async login(
-    email: string,
+    username: string,
     password: string,
   ): Promise<LoginResponse> {
-    const { data } = await api.post('/auth/login', { email, password });
+    const { data } = await api.post('/auth/login', { username, password });
+    if (data.code !== 0) {
+      throw new Error(data.message || '登录失败');
+    }
     return data.data;
   },
 
@@ -36,15 +35,18 @@ export const authService = {
       email,
       password,
     });
+    if (data.code !== 0) {
+      throw new Error(data.message || '注册失败');
+    }
     return data.data;
   },
 
-  async refreshToken(refreshToken: string): Promise<{ accessToken: string }> {
+  async refreshToken(refreshToken: string): Promise<{ token: string }> {
     const { data } = await api.post('/auth/refresh', { refreshToken });
     return data.data;
   },
 
-  async getMe(): Promise<LoginResponse['user']> {
+  async getMe(): Promise<IUser> {
     const { data } = await api.get('/auth/me');
     return data.data;
   },

@@ -1,26 +1,48 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import { useConfigStore } from '../stores/configStore';
-import { Mail, MessageCircle, ExternalLink, HelpCircle, ChevronDown, Send } from 'lucide-react';
+import { api } from '../services/api';
+import { Mail, MessageCircle, ExternalLink, HelpCircle, ChevronDown, Send, Loader2 } from 'lucide-react';
 
 export default function ContactPage() {
-  const { apiMode } = useConfigStore();
+  const { apiMode, serverApi } = useConfigStore();
   const [feedbackType, setFeedbackType] = useState<'BUG' | 'FEATURE' | 'QUESTION' | 'OTHER'>('FEATURE');
   const [feedbackTitle, setFeedbackTitle] = useState('');
   const [feedbackContent, setFeedbackContent] = useState('');
   const [feedbackContact, setFeedbackContact] = useState('');
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [feedbackSending, setFeedbackSending] = useState(false);
+  const [feedbackError, setFeedbackError] = useState('');
 
   const faqs = [
     { q: '如何配置API Key？', a: '进入设置页面，选择"本地API"模式，填入API Key和Base URL即可。' },
     { q: '支持哪些AI模型？', a: '支持OpenAI GPT系列、Claude系列以及任何兼容OpenAI接口的模型。' },
     { q: '背景文件的上下文长度限制？', a: '取决于所选模型的上下文窗口，系统会自动管理Token分配。' },
     { q: '数据存储在哪里？', a: '本地模式数据存储在本地浏览器/Electron中，服务器模式存储在云端PostgreSQL。' },
+    { q: '如何连接我的服务器？', a: '在设置中切换到"服务器API"模式，输入您的服务器地址（如 http://your-server:3001），然后登录即可。连接后侧边栏底部会显示连接状态。' },
   ];
 
-  const handleSubmitFeedback = () => {
+  const handleSubmitFeedback = async () => {
     if (!feedbackTitle.trim() || !feedbackContent.trim()) return;
-    // TODO: 在服务器模式下发送到服务器
+    setFeedbackError('');
+
+    if (apiMode === 'server' && serverApi.isLoggedIn) {
+      setFeedbackSending(true);
+      try {
+        await api.post('/feedback', {
+          type: feedbackType,
+          title: feedbackTitle.trim(),
+          content: feedbackContent.trim(),
+          contact: feedbackContact.trim() || undefined,
+        });
+      } catch (err: any) {
+        setFeedbackError(err?.response?.data?.message || '发送失败，请稍后重试');
+        setFeedbackSending(false);
+        return;
+      }
+      setFeedbackSending(false);
+    }
+
     setFeedbackSent(true);
     setFeedbackTitle('');
     setFeedbackContent('');
@@ -78,6 +100,11 @@ export default function ContactPage() {
             </div>
           ) : (
             <>
+              {feedbackError && (
+                <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
+                  {feedbackError}
+                </div>
+              )}
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">反馈类型</label>
                 <select
@@ -121,12 +148,16 @@ export default function ContactPage() {
                   className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
-              <Button onClick={handleSubmitFeedback} disabled={!feedbackTitle || !feedbackContent}>
-                <Send className="w-4 h-4 mr-1" />
-                提交反馈
+              <Button onClick={handleSubmitFeedback} disabled={!feedbackTitle || !feedbackContent || feedbackSending}>
+                {feedbackSending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+                {feedbackSending ? '发送中...' : '提交反馈'}
               </Button>
               <p className="text-xs text-gray-400">
-                {apiMode === 'server' ? '反馈将发送至服务器' : '本地模式下仅展示表单'}
+                {apiMode === 'server' && serverApi.isLoggedIn
+                  ? '反馈将提交至服务器'
+                  : apiMode === 'server' && !serverApi.isLoggedIn
+                  ? '请先登录服务器后再提交反馈'
+                  : '本地模式下反馈将保存在本地'}
               </p>
             </>
           )}

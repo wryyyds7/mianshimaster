@@ -8,7 +8,7 @@ import { LogIn, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setServerToken, updateLocalApiConfig, serverApi } = useConfigStore();
+  const { setServerToken, setServerUrl: saveServerUrl, updateLocalApiConfig, serverApi } = useConfigStore();
   const [mode, setMode] = useState<'login' | 'api'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -22,10 +22,10 @@ export default function LoginPage() {
     setError('');
     setLoading(true);
     try {
-      // 先更新服务器地址
-      updateLocalApiConfig({}); // 确保serverApi.baseUrl被更新
+      // 先更新服务器地址到 configStore（api 拦截器从这里读取 baseURL）
+      saveServerUrl(serverUrl.trim() || 'http://localhost:3001');
       const res = await authService.login(username, password);
-      setServerToken(res.accessToken, res.user);
+      setServerToken(res.token, res.user);
       navigate('/');
     } catch (err: any) {
       const msg = err?.response?.data?.message || err?.message || '登录失败，请检查用户名和密码';

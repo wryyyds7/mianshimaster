@@ -10,14 +10,14 @@ import { Server, Key, Globe, Cpu, Languages, Download, Database } from 'lucide-r
 export default function SettingsPage() {
   const {
     apiMode, localApi, serverApi, language, theme,
-    setApiMode, updateLocalApiConfig, setTheme, setLanguage,
+    setApiMode, updateLocalApiConfig, setServerUrl, setTheme, setLanguage,
   } = useConfigStore();
 
   const { historySessions } = useSessionStore();
   const { items: knowledgeItems } = useKnowledgeStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
-  const [serverUrl, setServerUrl] = useState(serverApi.baseUrl);
+  const [serverUrl, setLocalServerUrl] = useState(serverApi.baseUrl);
 
   // 导出全部数据
   const handleExportAll = () => {
@@ -94,7 +94,8 @@ export default function SettingsPage() {
               <input
                 type="text"
                 value={serverUrl}
-                onChange={(e) => setServerUrl(e.target.value)}
+                onChange={(e) => setLocalServerUrl(e.target.value)}
+                onBlur={() => setServerUrl(serverUrl.trim() || 'http://localhost:3001')}
                 placeholder="http://localhost:3001"
                 className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />

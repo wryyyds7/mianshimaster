@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { cn } from '../../utils/cn';
 import { useConfigStore } from '../../stores/configStore';
 import { useSessionStore } from '../../stores/sessionStore';
@@ -14,6 +14,10 @@ import {
   Sun,
   Moon,
   Monitor,
+  LogOut,
+  Wifi,
+  WifiOff,
+  Loader2,
 } from 'lucide-react';
 
 const navigation = [
@@ -26,8 +30,11 @@ const navigation = [
 ];
 
 export default function AppLayout() {
-  const { theme, setTheme } = useConfigStore();
+  const navigate = useNavigate();
+  const { theme, setTheme, apiMode, serverApi, clearServerSession, setApiMode } = useConfigStore();
   const isActive = useSessionStore((s) => s.isActive);
+  const [checking, setChecking] = useState(false);
+  const [serverOnline, setServerOnline] = useState<boolean | null>(null);
 
   const cycleTheme = () => {
     const themes: Array<'light' | 'dark' | 'system'> = ['light', 'dark', 'system'];
@@ -36,6 +43,28 @@ export default function AppLayout() {
   };
 
   const ThemeIcon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
+
+  // 验证服务器连接
+  const checkServerConnection = async () => {
+    if (apiMode !== 'server') return;
+    setChecking(true);
+    try {
+      const resp = await fetch(`${serverApi.baseUrl}/health`, { signal: AbortSignal.timeout(3000) });
+      setServerOnline(resp.ok);
+    } catch {
+      setServerOnline(false);
+    } finally {
+      setChecking(false);
+      setTimeout(() => setServerOnline(null), 5000);
+    }
+  };
+
+  // 登出
+  const handleLogout = () => {
+    clearServerSession();
+    setApiMode('local');
+    navigate('/');
+  };
 
   return (
     <div className="h-screen flex flex-col bg-white dark:bg-gray-900">
@@ -74,7 +103,39 @@ export default function AppLayout() {
           </nav>
 
           {/* 底部信息 */}
-          <div className="p-3 border-t border-gray-200 dark:border-gray-700">
+          <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            {/* 服务器连接状态 */}
+            {apiMode === 'server' && (
+              <button
+                onClick={checkServerConnection}
+                disabled={checking}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                title="点击验证服务器连接"
+              >
+                {checking ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-yellow-500" />
+                ) : serverOnline === true ? (
+                  <Wifi className="w-4 h-4 text-green-500" />
+                ) : serverOnline === false ? (
+                  <WifiOff className="w-4 h-4 text-red-500" />
+                ) : (
+                  <Wifi className="w-4 h-4 text-gray-400" />
+                )}
+                <span className="text-xs truncate">
+                  {checking
+                    ? '检测中...'
+                    : serverOnline === true
+                    ? '服务器在线'
+                    : serverOnline === false
+                    ? '服务器离线'
+                    : serverApi.isLoggedIn
+                    ? `已连接 (${serverApi.user?.username})`
+                    : serverApi.baseUrl}
+                </span>
+              </button>
+            )}
+
+            {/* 主题切换 */}
             <button
               onClick={cycleTheme}
               className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -82,6 +143,17 @@ export default function AppLayout() {
               <ThemeIcon className="w-4 h-4" />
               <span>{theme === 'system' ? '跟随系统' : theme === 'dark' ? '深色' : '浅色'}</span>
             </button>
+
+            {/* 登出（服务器模式） */}
+            {serverApi.isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>登出</span>
+              </button>
+            )}
           </div>
         </aside>
 

@@ -12,6 +12,7 @@ interface ConfigState {
   // 操作
   setApiMode: (mode: ApiMode) => void;
   updateLocalApiConfig: (config: Partial<ILocalApiConfig>) => void;
+  setServerUrl: (url: string) => void;
   setServerToken: (token: string, user: IUser) => void;
   clearServerSession: () => void;
   setTheme: (theme: Theme) => void;
@@ -47,6 +48,11 @@ export const useConfigStore = create<ConfigState>()(
       updateLocalApiConfig: (config) =>
         set((state) => ({
           localApi: { ...state.localApi, ...config },
+        })),
+
+      setServerUrl: (url) =>
+        set((state) => ({
+          serverApi: { ...state.serverApi, baseUrl: url },
         })),
 
       setServerToken: (token, user) =>
@@ -92,9 +98,9 @@ export const useConfigStore = create<ConfigState>()(
         },
         serverApi: {
           baseUrl: state.serverApi.baseUrl,
-          isLoggedIn: false,
-          token: null,
-          user: null,
+          isLoggedIn: state.serverApi.isLoggedIn,
+          token: state.serverApi.token,       // 持久化token以支持刷新后保持登录
+          user: state.serverApi.user,
         },
         theme: state.theme,
         language: state.language,
