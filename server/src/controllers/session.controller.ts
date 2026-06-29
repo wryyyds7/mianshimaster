@@ -91,4 +91,64 @@ export const sessionController = {
       next(error);
     }
   },
+
+  // 创建问题（提问者匿名提交）
+  createQuestion: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionId = req.params.id;
+      const { title, content } = req.body;
+      // 生成匿名提问者ID
+      const askerId = uuidv4();
+
+      // 验证会话存在且活跃
+      const session = await prisma.session.findUnique({
+        where: { id: sessionId },
+      });
+      if (!session) {
+        return res.status(404).json({ code: 404, message: '会话不存在' });
+      }
+      if (session.status !== 'ACTIVE') {
+        return res.status(422).json({ code: 422, message: '会话已结束，无法提交问题' });
+      }
+
+      const question = await prisma.question.create({
+        data: {
+          sessionId,
+          askerId,
+          title,
+          content,
+          priority: 0,
+          status: 'PENDING',
+        },
+      });
+
+      res.status(201).json({ code: 0, data: question });
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // 获取会话问题列表
+  listQuestions: async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const sessionId = req.params.id;
+
+      const session = await prisma.session.findFirst({
+        where: { id: sessionId, userId: req.user!.userId },
+      });
+      if (!session) {
+        return res.status(404).json({ code: 404, message: '会话不存在' });
+      }
+
+      const questions = await prisma.question.findMany({
+        where: { sessionId },
+        orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+        include: { answers: true },
+      });
+
+      res.json({ code: 0, data: questions });
+    } catch (error) {
+      next(error);
+    }
+  },
 };
