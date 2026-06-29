@@ -161,7 +161,7 @@ export default function WorkspacePage() {
           <ChatDetail
             question={questions.find(q => q.id === activeQuestionId) || null}
             isStreaming={isStreaming}
-            streamingContent={useSessionStore.getState().streamingContent}
+            streamingContent={useSessionStore((s) => s.streamingContent)}
           />
         </div>
       </div>

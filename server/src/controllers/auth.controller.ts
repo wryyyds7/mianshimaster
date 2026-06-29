@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import bcryptjs from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
+import { ValidationError, UnauthorizedError } from '../middleware/errorHandler';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -12,7 +13,13 @@ export const authController = {
     try {
       const { username, email, password } = req.body;
       if (!username || !email || !password) {
-        return res.status(422).json({ code: 422, message: '缺少必填字段' });
+        throw new ValidationError([
+          { field: !username ? 'username' : !email ? 'email' : 'password', message: '缺少必填字段' },
+        ]);
+      }
+
+      if (password.length < 6) {
+        throw new ValidationError([{ field: 'password', message: '密码长度不能少于6位' }]);
       }
 
       const existingUser = await prisma.user.findFirst({
