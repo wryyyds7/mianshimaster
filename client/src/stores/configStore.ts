@@ -78,10 +78,8 @@ export const useConfigStore = create<ConfigState>()(
 
       isConfigured: () => {
         const state = get();
-        return (
-          state.localApi.apiKey.length > 0 ||
-          state.localApi.provider === 'custom'
-        );
+        // 必须填写了apiKey才算已配置（custom provider也需要配置）
+        return state.localApi.apiKey.length > 0;
       },
     }),
     {

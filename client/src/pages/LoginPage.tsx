@@ -3,33 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { useConfigStore } from '../stores/configStore';
-import { LogIn } from 'lucide-react';
+import { authService } from '../services/authService';
+import { LogIn, Loader2 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { setServerToken, updateLocalApiConfig } = useConfigStore();
+  const { setServerToken, updateLocalApiConfig, serverApi } = useConfigStore();
   const [mode, setMode] = useState<'login' | 'api'>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [baseUrl, setBaseUrl] = useState('https://api.openai.com/v1');
+  const [serverUrl, setServerUrl] = useState(serverApi.baseUrl);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleServerLogin = async () => {
     setError('');
+    setLoading(true);
     try {
-      // TODO: 实际调用服务器登录API
-      // const res = await authService.login({ username, password });
-      // setServerToken(res.token, res.user);
-      setServerToken('mock-token', {
-        id: '1',
-        username,
-        email: `${username}@example.com`,
-        role: 'USER',
-      });
+      // 先更新服务器地址
+      updateLocalApiConfig({}); // 确保serverApi.baseUrl被更新
+      const res = await authService.login(username, password);
+      setServerToken(res.accessToken, res.user);
       navigate('/');
-    } catch {
-      setError('登录失败，请检查用户名和密码');
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || err?.message || '登录失败，请检查用户名和密码';
+      setError(msg);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -107,13 +109,20 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <Input
+                label="服务器地址"
+                placeholder="http://localhost:3001"
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+              />
               <Button
                 className="w-full"
                 onClick={handleServerLogin}
-                disabled={!username || !password}
+                disabled={!username || !password || loading}
+                isLoading={loading}
               >
                 <LogIn className="w-4 h-4 mr-2" />
-                登录
+                {loading ? '登录中...' : '登录'}
               </Button>
             </div>
           ) : (

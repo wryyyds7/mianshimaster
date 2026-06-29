@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { Button } from '../ui/Button';
 import { Upload, X, FileText, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '../../utils/cn';
-import { ALLOWED_FILE_EXTENSIONS, MAX_FILE_SIZE } from '../../utils/constants';
+import { ALLOWED_FILE_EXTENSIONS, ALLOWED_FILE_TYPES, MAX_FILE_SIZE } from '../../utils/constants';
 import type { IFileInfo } from '@shared/types';
 
 interface FileUploaderProps {
@@ -10,8 +10,39 @@ interface FileUploaderProps {
   onCancel: () => void;
 }
 
+/**
+ * 解析文件内容
+ * 在Electron中可通过IPC调用主进程解析，浏览器中使用FileReader
+ */
+async function parseFileContent(file: File): Promise<string> {
+  // PDF 文件尝试用 Web API + 文本提取
+  if (file.type === 'application/pdf' || file.name.endsWith('.pdf')) {
+    // PDF 需要专门的解析器，Electron 中可用 pdf-parse
+    // 浏览器环境下返回标记
+    return `[PDF文件: ${file.name}]\n(请在Electron环境中运行以解析PDF内容)\n`;
+  }
+  
+  // TXT 和 MD 文件用 FileReader 直接读
+  if (file.type === 'text/plain' || file.name.endsWith('.txt') ||
+      file.type === 'text/markdown' || file.type === 'text/x-markdown' || file.name.endsWith('.md')) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error(`读取文件失败: ${file.name}`));
+      reader.readAsText(file);
+    });
+  }
+
+  // DOCX 需要 mammoth 库解析
+  if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || file.name.endsWith('.docx')) {
+    return `[Word文件: ${file.name}]\n(请在Electron环境中运行以解析DOCX内容)\n`;
+  }
+
+  return `[文件: ${file.name}]\n(不支持的文件格式)\n`;
+}
+
 export default function FileUploader({ onComplete, onCancel }: FileUploaderProps) {
-  const [files, setFiles] = useState<IFileInfo[]>([]);
+  const [files, setFiles] = useState<{ file: File; info: IFileInfo }[]>([]);
   const [isParsing, setIsParsing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,7 +50,7 @@ export default function FileUploader({ onComplete, onCancel }: FileUploaderProps
     if (!selectedFiles) return;
     setError(null);
 
-    const newFiles: IFileInfo[] = [];
+    const newEntries: { file: File; info: IFileInfo }[] = [];
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
 
@@ -36,14 +67,17 @@ export default function FileUploader({ onComplete, onCancel }: FileUploaderProps
         return;
       }
 
-      newFiles.push({
-        name: file.name,
-        size: file.size,
-        type: file.type,
+      newEntries.push({
+        file,
+        info: {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+        },
       });
     }
 
-    setFiles((prev) => [...prev, ...newFiles]);
+    setFiles((prev) => [...prev, ...newEntries]);
   }, []);
 
   // 移除文件
@@ -58,16 +92,23 @@ export default function FileUploader({ onComplete, onCancel }: FileUploaderProps
     setError(null);
 
     try {
-      // TODO: 实际项目中使用 electron ipc 或 Web API 解析文件
-      // 这里用模拟内容
-      const contextText = files
-        .map((f) => `[文件: ${f.name}]\n(文件内容解析中...)\n`)
+      // 逐个解析文件内容
+      const parsedResults = await Promise.all(
+        files.map(async (entry) => {
+          const text = await parseFileContent(entry.file);
+          return { ...entry.info, text };
+        })
+      );
+
+      // 合并所有文件的文本作为上下文
+      const contextText = parsedResults
+        .map((f) => `=== 文件: ${f.name} ===\n${f.text || '(无文本内容)'}\n`)
         .join('\n---\n');
 
-      // 模拟解析延迟
-      await new Promise((r) => setTimeout(r, 500));
-
-      onComplete(files, contextText);
+      onComplete(
+        parsedResults.map(({ name, size, type }) => ({ name, size, type })),
+        contextText,
+      );
     } catch (err) {
       setError('文件解析失败，请重试');
       setIsParsing(false);
@@ -120,7 +161,7 @@ export default function FileUploader({ onComplete, onCancel }: FileUploaderProps
           <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
             已选择 {files.length} 个文件
           </p>
-          {files.map((file, index) => (
+          {files.map((entry, index) => (
             <div
               key={index}
               className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
@@ -128,10 +169,10 @@ export default function FileUploader({ onComplete, onCancel }: FileUploaderProps
               <div className="flex items-center gap-2 min-w-0">
                 <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span className="text-sm text-gray-700 dark:text-gray-300 truncate">
-                  {file.name}
+                  {entry.info.name}
                 </span>
                 <span className="text-xs text-gray-400 flex-shrink-0">
-                  {formatSize(file.size)}
+                  {formatSize(entry.info.size)}
                 </span>
               </div>
               <button

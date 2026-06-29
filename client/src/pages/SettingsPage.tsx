@@ -1,15 +1,44 @@
 import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
 import { cn } from '../utils/cn';
 import { useConfigStore } from '../stores/configStore';
+import { useSessionStore } from '../stores/sessionStore';
+import { useKnowledgeStore } from '../stores/knowledgeStore';
 import { DEFAULT_MODELS, API_PROVIDERS } from '../utils/constants';
-import { Server, Key, Globe, Cpu } from 'lucide-react';
+import { Server, Key, Globe, Cpu, Languages, Download, Database } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { apiMode, localApi, setApiMode, updateLocalApiConfig } = useConfigStore();
+  const {
+    apiMode, localApi, serverApi, language, theme,
+    setApiMode, updateLocalApiConfig, setTheme, setLanguage,
+  } = useConfigStore();
+
+  const { historySessions } = useSessionStore();
+  const { items: knowledgeItems } = useKnowledgeStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
+  const [serverUrl, setServerUrl] = useState(serverApi.baseUrl);
+
+  // 导出全部数据
+  const handleExportAll = () => {
+    const data = {
+      exportTime: new Date().toISOString(),
+      sessions: historySessions,
+      knowledge: knowledgeItems,
+      config: {
+        apiMode,
+        theme,
+        language,
+      },
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `mianshimaster-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="h-full overflow-y-auto custom-scrollbar">
@@ -52,6 +81,29 @@ export default function SettingsPage() {
             本地API优先使用，也可在登录后切换为服务器API
           </p>
         </section>
+
+        {/* 服务器模式设置 */}
+        {apiMode === 'server' && (
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Server className="w-5 h-5" />
+              服务器配置
+            </h2>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">服务器地址</label>
+              <input
+                type="text"
+                value={serverUrl}
+                onChange={(e) => setServerUrl(e.target.value)}
+                placeholder="http://localhost:3001"
+                className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              {serverApi.isLoggedIn ? `已登录: ${serverApi.user?.username || ''}` : '未登录，请前往登录页面'}
+            </p>
+          </section>
+        )}
 
         {/* 本地API配置 */}
         {apiMode === 'local' && (
@@ -144,6 +196,80 @@ export default function SettingsPage() {
             </div>
           </section>
         )}
+
+        {/* 外观设置 */}
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">外观与语言</h2>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">主题</label>
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+              {(['light', 'dark', 'system'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTheme(t)}
+                  className={cn(
+                    'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+                    theme === t
+                      ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  )}
+                >
+                  {t === 'light' ? '浅色' : t === 'dark' ? '深色' : '跟随系统'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+              <Languages className="w-3.5 h-3.5" />
+              语言
+            </label>
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+              {(['zh-CN', 'en-US'] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLanguage(l)}
+                  className={cn(
+                    'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+                    language === l
+                      ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700'
+                  )}
+                >
+                  {l === 'zh-CN' ? '中文' : 'English'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* 数据管理 */}
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Database className="w-5 h-5" />
+            数据管理
+          </h2>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">导出全部数据</p>
+              <p className="text-xs text-gray-400">导出会话记录、知识库和配置</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleExportAll}>
+              <Download className="w-4 h-4 mr-1" />
+              导出
+            </Button>
+          </div>
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">数据统计</p>
+              <p className="text-xs text-gray-400">
+                {historySessions.length} 个会话 | {knowledgeItems.length} 条知识
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

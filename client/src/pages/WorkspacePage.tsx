@@ -44,39 +44,67 @@ export default function WorkspacePage() {
   const handleNewQuestion = useCallback((title: string, content: string) => {
     const question = addQuestion(title, content);
 
-    // 触发AI回答
-    const config = apiMode === 'local'
-      ? localApi
-      : { provider: 'openai' as const, apiKey: serverApi.token || '', baseUrl: serverApi.baseUrl, model: 'gpt-4o', temperature: 0.7, maxTokens: 4096 };
-
+    // 触发AI回答 — 根据模式选择不同路径
     startStreaming(question.id);
 
-    aiService.streamChat(
-      config,
-      contextText,
-      [{ role: 'user', content }],
-      (chunk) => appendStreamChunk(chunk),
-      (fullContent) => {
-        endStreaming({
-          id: uuidv4(),
-          questionId: question.id,
-          content: fullContent,
-          model: config.model,
-          tokensUsed: null,
-          duration: null,
-          isStreamed: true,
-          createdAt: new Date().toISOString(),
-        });
-      },
-      (error) => {
-        cancelStreaming();
-        console.error('AI回答失败:', error);
-      },
-    ).catch((err) => {
-      // 捕获未被内部回调处理的异常
-      console.error('AI流式对话未预期错误:', err);
-      if (isStreaming) cancelStreaming();
-    });
+    if (apiMode === 'server' && serverApi.token) {
+      // 服务器模式：通过服务器代理调用AI
+      aiService.streamChatServer(
+        serverApi.baseUrl,
+        serverApi.token,
+        contextText,
+        [{ role: 'user', content }],
+        'gpt-4o',
+        0.7,
+        (chunk) => appendStreamChunk(chunk),
+        (fullContent) => {
+          endStreaming({
+            id: uuidv4(),
+            questionId: question.id,
+            content: fullContent,
+            model: 'gpt-4o',
+            tokensUsed: null,
+            duration: null,
+            isStreamed: true,
+            createdAt: new Date().toISOString(),
+          });
+        },
+        (error) => {
+          cancelStreaming();
+          console.error('服务器AI回答失败:', error);
+        },
+      ).catch((err) => {
+        console.error('AI流式对话未预期错误:', err);
+        if (isStreaming) cancelStreaming();
+      });
+    } else {
+      // 本地模式：直连AI API
+      aiService.streamChat(
+        localApi,
+        contextText,
+        [{ role: 'user', content }],
+        (chunk) => appendStreamChunk(chunk),
+        (fullContent) => {
+          endStreaming({
+            id: uuidv4(),
+            questionId: question.id,
+            content: fullContent,
+            model: localApi.model,
+            tokensUsed: null,
+            duration: null,
+            isStreamed: true,
+            createdAt: new Date().toISOString(),
+          });
+        },
+        (error) => {
+          cancelStreaming();
+          console.error('AI回答失败:', error);
+        },
+      ).catch((err) => {
+        console.error('AI流式对话未预期错误:', err);
+        if (isStreaming) cancelStreaming();
+      });
+    }
   }, [apiMode, localApi, serverApi, contextText, isStreaming, addQuestion, startStreaming, appendStreamChunk, endStreaming, cancelStreaming]);
 
   // 入口界面（未进入工作台时）

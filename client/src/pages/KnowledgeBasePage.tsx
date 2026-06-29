@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import KnowledgeEditor from '../components/knowledge/KnowledgeEditor';
@@ -10,25 +10,13 @@ import type { IKnowledgeItem } from '@shared/types';
 export default function KnowledgeBasePage() {
   const {
     items, categories, selectedCategory, searchQuery, editingItem,
-    setItems, addItem, updateItem, deleteItem,
+    addItem, updateItem, deleteItem,
     setSearchQuery, setSelectedCategory, setEditingItem,
     getFilteredItems,
   } = useKnowledgeStore();
 
   const [isCreating, setIsCreating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
-
-  // 模拟加载数据
-  useEffect(() => {
-    setItems([
-      {
-        id: '1', userId: 'u1', title: 'React基础知识', content: '# React核心概念\n\n## 1. JSX\nJSX是JavaScript的语法扩展...\n\n## 2. 组件\nReact组件分为函数组件和类组件...', category: '前端技术', tags: ['React', 'JavaScript'], sourceFile: null, isPublic: false, createdAt: '', updatedAt: '',
-      },
-      {
-        id: '2', userId: 'u1', title: '面试技巧', content: '## 常见面试技巧\n\n1. STAR法则\n2. 技术问题的回答框架...', category: '面试指导', tags: ['技巧', '面试'], sourceFile: null, isPublic: false, createdAt: '', updatedAt: '',
-      },
-    ]);
-  }, []);
 
   const filteredItems = getFilteredItems();
 

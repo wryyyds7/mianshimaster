@@ -254,3 +254,31 @@ main          ← 生产分支（受保护）
 | **数据库索引** | 为高频查询字段建立索引 |
 | **本地缓存** | 知识库内容本地LRU缓存 |
 | **打包优化** | electron-vite代码分割，Tree Shaking |
+
+## 七、更新日志
+
+### 2025年6月29日 - 全功能审计与修复
+
+**修复的严重Bug：**
+- ✅ 服务器模式AI调用路径修复：`aiService.ts` 新增 `streamChatServer()` 方法，正确请求 `/api/ai/chat` 而非 `/chat/completions`
+- ✅ `useAI.ts` Hook参数修复：修正与 `aiService` 方法签名的参数顺序不匹配问题，自动检测本地/服务器模式
+- ✅ `configStore.isConfigured()` 逻辑修复：custom provider不再绕过API Key校验
+
+**修复的高优先级问题：**
+- ✅ LoginPage 接入真实 authService API调用，移除Mock Token
+- ✅ FileUploader 接入 FileReader 实现真实文件解析（TXT/MD直接读取，PDF/DOCX标记待Electron环境）
+- ✅ 会话数据持久化：sessionStore 添加 historySessions 并用 zustand persist 存入 localStorage
+- ✅ HistoryPage 从 sessionStore 加载真实数据，支持导出JSON和删除
+- ✅ KnowledgeBasePage 移除Mock数据，知识库数据通过 persist 持久化到 localStorage
+
+**完善的功能：**
+- ✅ SettingsPage 新增语言切换、服务器地址配置、主题选择、数据统计与导出
+- ✅ ContactPage 新增反馈表单（反馈类型、标题、内容、联系方式）
+
+**数据存储现状：**
+| 数据 | 存储位置 | 持久化 |
+|------|---------|--------|
+| API配置 | localStorage (mianshimaster-config) | ✅ API Key不持久化 |
+| 会话历史 | localStorage (mianshimaster-sessions) | ✅ persist中间件 |
+| 知识库 | localStorage (mianshimaster-knowledge) | ✅ persist中间件 |
+| 临时会话状态 | React内存 | ❌ 关闭丢失（退出时自动保存到historySessions） |
