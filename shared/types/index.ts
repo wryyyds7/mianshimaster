@@ -164,6 +164,68 @@ export interface WSAnswerComplete {
   answer: IAnswer;
 }
 
+// ========== Agent 相关类型 ==========
+export type AgentState = 'IDLE' | 'LISTENING' | 'THINKING' | 'RESPONDING';
+export type AgentMode = 'voice' | 'text' | 'review';
+
+export interface IAgentConfig {
+  mode: AgentMode;
+  interviewRole: string;        // 面试官角色描述
+  interviewStyle: string;       // 面试风格 (结构化/压力面/行为面)
+  targetPosition: string;       // 目标岗位
+  candidateResume: string;      // 候选人简历摘要（可作为system context）
+  evaluationCriteria: string[]; // 评分维度
+  maxRounds: number;            // 最大面试轮次
+  language: 'zh-CN' | 'en-US'; // 面试语言
+}
+
+export interface ISTTApiConfig {
+  provider: 'web-speech' | 'openai-whisper' | 'tencent-asr';
+  apiKey: string;
+  baseUrl: string;
+  language: string;  // 识别语言代码
+}
+
+export interface IAgentMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: string;
+  metadata?: IAgentMessageMeta;
+}
+
+export interface IAgentMessageMeta {
+  /** LLM 内部评分（0-100），仅 assistant 消息 */
+  score?: number;
+  /** 涉及的知识点标签 */
+  knowledgeTags?: string[];
+  /** 下一轮策略 */
+  nextStrategy?: 'follow_up' | 'new_topic' | 'summary' | 'end';
+  /** 该轮对话耗时(ms) */
+  duration?: number;
+}
+
+export interface IAgentResponse {
+  /** 给用户看的显示内容 */
+  displayContent: string;
+  /** 结构化元数据 */
+  metadata?: IAgentMessageMeta;
+  /** 当前对话轮次 */
+  round: number;
+  /** 是否结束 */
+  isComplete: boolean;
+}
+
+export interface IAgentEvent {
+  type: 'state_change' | 'chunk' | 'complete' | 'error' | 'speech_result';
+  state?: AgentState;
+  chunk?: string;
+  response?: IAgentResponse;
+  error?: string;
+  transcript?: string;
+}
+
+export type IAgentEventHandler = (event: IAgentEvent) => void;
+
 // ========== 反馈类型 ==========
 export type FeedbackType = 'BUG' | 'FEATURE' | 'QUESTION' | 'OTHER';
 

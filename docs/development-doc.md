@@ -307,6 +307,45 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - AI Agent 面试系统实现
+
+**架构概述：**
+实现了一个完整的 AI Agent 面试模拟系统，包含五大模块：
+
+```
+agent/
+├── types.ts           # Agent 内部类型定义
+├── StateMachine.ts    # 状态机 (IDLE→LISTENING→THINKING→RESPONDING)
+├── ContextManager.ts  # 上下文管理器（系统提示词构建、消息组装、输出解析）
+├── SpeechInput.ts     # 语音输入模块（Web Speech / Whisper / 腾讯云ASR）
+├── InterviewAgent.ts  # 核心编排引擎（单例模式）
+└── index.ts           # 统一导出
+```
+
+**各模块职责：**
+| 模块 | 职责 | 关键设计 |
+|------|------|---------|
+| StateMachine | 对话状态管理 | 合法转换表校验，强制跳转（abort） |
+| ContextManager | LLM上下文构建 | 滑动窗口历史、评分标准格式化、META标签解析 |
+| SpeechInput | 语音转文字 | 工厂模式，支持3种STT提供商 |
+| InterviewAgent | 流程编排 | 事件驱动回调，解耦UI层 |
+| AgentChatPanel | 聊天界面 | 独立组件，与原ChatDetail完全解耦 |
+
+**集成方式：**
+- WorkspacePage 新增 "问答/Agent" 模式切换标签
+- 原有问答模式代码 100% 保持不动
+- Agent 模式使用独立的 AgentChatPanel 组件
+- configStore 新增 `sttApi` 字段（不破坏现有结构）
+- SettingsPage 新增 STT 提供商选择
+
+**Agent 对话流程：**
+```
+上传简历 → Agent.start() → 生成开场问题(THINKING)
+→ 用户回答(IDLE) → Agent.sendText() → LLM 流式输出(THINKING)
+→ parseResponse() 分离显示内容/META元数据 → 展示+评分(RESPONDING)
+→ 下一轮循环...
+```
+
 ### 2026年6月30日 - API配置弹窗无法关闭修复
 
 **问题：** 用户在 API Key 配置弹窗中保存后，弹窗不消失

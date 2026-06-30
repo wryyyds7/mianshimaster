@@ -198,6 +198,26 @@ export default function SettingsPage() {
           </section>
         )}
 
+        {/* 语音识别设置 */}
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">语音识别 (STT)</h2>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">提供商</label>
+            <select
+              value={useConfigStore(s => s.sttApi.provider)}
+              onChange={(e) => useConfigStore.getState().updateSTTConfig({ provider: e.target.value as any })}
+              className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="web-speech">浏览器内置 (免费)</option>
+              <option value="openai-whisper">OpenAI Whisper</option>
+              <option value="tencent-asr">腾讯云 ASR</option>
+            </select>
+          </div>
+          <p className="text-xs text-gray-400">
+            用于 Agent 模拟面试的语音输入，浏览器内置方案免费无需 API Key
+          </p>
+        </section>
+
         {/* 外观设置 */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">外观与语言</h2>

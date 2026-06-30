@@ -6,10 +6,15 @@ import Modal from '../components/ui/Modal';
 import FileUploader from '../components/workspace/FileUploader';
 import QuestionList from '../components/workspace/QuestionList';
 import ChatDetail from '../components/workspace/ChatDetail';
+import AgentChatPanel from '../components/workspace/AgentChatPanel';
 import { aiService } from '../services/aiService';
-import { LogOut, Upload, FileText, AlertTriangle, XCircle } from 'lucide-react';
-import type { IFileInfo } from '@shared/types';
+import { useAgent } from '../hooks/useAgent';
+import { isSpeechSupported } from '../agent/SpeechInput';
+import { LogOut, Upload, FileText, AlertTriangle, XCircle, Bot, MessageSquare } from 'lucide-react';
+import type { IFileInfo, IAgentConfig } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
+
+type WorkspaceMode = 'qa' | 'agent';
 
 export default function WorkspacePage() {
   const {
@@ -24,6 +29,11 @@ export default function WorkspacePage() {
   const [showEntrance, setShowEntrance] = useState(!isActive);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('qa');
+
+  // Agent hook
+  const agent = useAgent();
+  const speechSupported = isSpeechSupported();
 
   // 进入工作台
   const handleEnterWorkspace = (files: IFileInfo[], text: string) => {
@@ -40,10 +50,26 @@ export default function WorkspacePage() {
     if (isStreaming) {
       cancelStreaming();
     }
+    agent.reset(); // 同时关闭 Agent
     exitWorkspace();
     setShowEntrance(true);
     setShowExitConfirm(false);
     setAiError(null);
+  };
+
+  // Agent 模式启动
+  const handleStartAgent = (files: IFileInfo[], text: string) => {
+    enterWorkspace(files, text);
+    setWorkspaceMode('agent');
+    setShowEntrance(false);
+
+    // 用上传的文件内容作为简历上下文
+    const agentConfig: Partial<IAgentConfig> = {
+      mode: speechSupported ? 'voice' : 'text',
+      candidateResume: text || '未提供简历',
+      language: 'zh-CN',
+    };
+    agent.start(agentConfig);
   };
 
   // 新增问题（模拟提问者提交）
@@ -133,10 +159,22 @@ export default function WorkspacePage() {
             上传背景文件作为AI的上下文参考，然后开始回答提问者的问题。
             你的身份固定为回答者。
           </p>
-          <Button size="lg" onClick={() => setShowEntrance(true)}>
-            <Upload className="w-5 h-5 mr-2" />
-            上传背景文件并开始
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button size="lg" onClick={() => {
+              setWorkspaceMode('qa');
+              setShowEntrance(true);
+            }}>
+              <MessageSquare className="w-5 h-5 mr-2" />
+              问答模式 - 上传文件并开始
+            </Button>
+            <Button size="lg" variant="outline" onClick={() => {
+              setWorkspaceMode('agent');
+              setShowEntrance(true);
+            }}>
+              <Bot className="w-5 h-5 mr-2" />
+              Agent 模拟面试
+            </Button>
+          </div>
         </div>
 
         {/* 退出确认弹窗 */}
@@ -174,11 +212,16 @@ export default function WorkspacePage() {
         <Modal
           open={showEntrance}
           onClose={() => setShowEntrance(false)}
-          title="上传背景文件"
+          title={workspaceMode === 'agent' ? '上传简历 - Agent 模拟面试' : '上传背景文件'}
         >
           <div className="p-6">
+            {workspaceMode === 'agent' && (
+              <p className="text-sm text-gray-500 mb-4">
+                上传你的简历文件，Agent 将作为面试官根据简历内容进行针对性提问。
+              </p>
+            )}
             <FileUploader
-              onComplete={handleEnterWorkspace}
+              onComplete={workspaceMode === 'agent' ? handleStartAgent : handleEnterWorkspace}
               onCancel={() => setShowEntrance(false)}
             />
           </div>
@@ -194,8 +237,33 @@ export default function WorkspacePage() {
       <div className="h-12 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-3">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-            {sessionTitle || '回答工作台'}
+            {sessionTitle || (workspaceMode === 'agent' ? 'Agent 模拟面试' : '回答工作台')}
           </h2>
+          {/* 模式切换 */}
+          <div className="flex rounded-md bg-gray-100 dark:bg-gray-700 p-0.5">
+            <button
+              onClick={() => setWorkspaceMode('qa')}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                workspaceMode === 'qa'
+                  ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <MessageSquare className="w-3 h-3 inline mr-1" />
+              问答
+            </button>
+            <button
+              onClick={() => setWorkspaceMode('agent')}
+              className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
+                workspaceMode === 'agent'
+                  ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Bot className="w-3 h-3 inline mr-1" />
+              Agent
+            </button>
+          </div>
           {backgroundFiles.length > 0 && (
             <span className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
               <FileText className="w-3.5 h-3.5" />
@@ -217,8 +285,8 @@ export default function WorkspacePage() {
         </div>
       </div>
 
-      {/* AI 错误提示条 */}
-      {aiError && (
+      {/* AI 错误提示条（仅问答模式） */}
+      {workspaceMode === 'qa' && aiError && (
         <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-start gap-3 shrink-0">
           <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 mt-0.5 shrink-0" />
           <p className="text-sm text-red-700 dark:text-red-300 flex-1">{aiError}</p>
@@ -231,27 +299,54 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      {/* 主体：左侧问题列表 + 右侧对话详情 */}
+      {/* 主体 */}
       <div className="flex-1 flex overflow-hidden">
-        {/* 左侧 - 问题列表 (30%) */}
-        <div className="w-[360px] border-r border-gray-200 dark:border-gray-700 flex flex-col shrink-0">
-          <QuestionList
-            questions={questions}
-            activeId={activeQuestionId}
-            onSelect={selectQuestion}
-            onNewQuestion={handleNewQuestion}
-            isStreaming={isStreaming}
+        {workspaceMode === 'agent' ? (
+          /* Agent 模拟面试模式 */
+          <AgentChatPanel
+            state={agent.state}
+            round={agent.round}
+            maxRounds={10}
+            history={agent.history}
+            streamingContent={agent.streamingContent}
+            lastResponse={agent.lastResponse}
+            error={agent.error}
+            isSpeechSupported={speechSupported}
+            onSendText={agent.sendText}
+            onStartListening={agent.startListening}
+            onStopListening={agent.stopListening}
+            onAbort={agent.abort}
+            onReset={() => {
+              const config: Partial<IAgentConfig> = {
+                mode: speechSupported ? 'voice' : 'text',
+                candidateResume: contextText || '未提供简历',
+                language: 'zh-CN',
+              };
+              agent.reset();
+              agent.start(config);
+            }}
           />
-        </div>
-
-        {/* 右侧 - 对话详情 (70%) */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <ChatDetail
-            question={questions.find(q => q.id === activeQuestionId) || null}
-            isStreaming={isStreaming}
-            streamingContent={useSessionStore((s) => s.streamingContent)}
-          />
-        </div>
+        ) : (
+          /* 问答模式 */
+          <>
+            <div className="w-[360px] border-r border-gray-200 dark:border-gray-700 flex flex-col shrink-0">
+              <QuestionList
+                questions={questions}
+                activeId={activeQuestionId}
+                onSelect={selectQuestion}
+                onNewQuestion={handleNewQuestion}
+                isStreaming={isStreaming}
+              />
+            </div>
+            <div className="flex-1 flex flex-col min-w-0">
+              <ChatDetail
+                question={questions.find(q => q.id === activeQuestionId) || null}
+                isStreaming={isStreaming}
+                streamingContent={useSessionStore((s) => s.streamingContent)}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* 退出确认弹窗（工作台内） */}

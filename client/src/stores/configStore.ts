@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ApiMode, ILocalApiConfig, IServerApiConfig, Theme, Language, IUser } from '@shared/types';
+import type { ApiMode, ILocalApiConfig, IServerApiConfig, ISTTApiConfig, Theme, Language, IUser } from '@shared/types';
 
 interface ConfigState {
   apiMode: ApiMode;
   localApi: ILocalApiConfig;
   serverApi: IServerApiConfig & { user: IUser | null };
+  sttApi: ISTTApiConfig;
   theme: Theme;
   language: Language;
 
@@ -15,6 +16,7 @@ interface ConfigState {
   setServerUrl: (url: string) => void;
   setServerToken: (token: string, user: IUser) => void;
   clearServerSession: () => void;
+  updateSTTConfig: (config: Partial<ISTTApiConfig>) => void;
   setTheme: (theme: Theme) => void;
   setLanguage: (lang: Language) => void;
 
@@ -39,6 +41,12 @@ export const useConfigStore = create<ConfigState>()(
         isLoggedIn: false,
         token: null,
         user: null,
+      },
+      sttApi: {
+        provider: 'web-speech',
+        apiKey: '',
+        baseUrl: '',
+        language: 'zh-CN',
       },
       theme: 'system' as Theme,
       language: 'zh-CN' as Language,
@@ -75,6 +83,11 @@ export const useConfigStore = create<ConfigState>()(
           },
         }),
 
+      updateSTTConfig: (config) =>
+        set((state) => ({
+          sttApi: { ...state.sttApi, ...config },
+        })),
+
       setTheme: (theme) => {
         set({ theme });
         applyTheme(theme);
@@ -101,6 +114,12 @@ export const useConfigStore = create<ConfigState>()(
           isLoggedIn: state.serverApi.isLoggedIn,
           token: state.serverApi.token,       // 持久化token以支持刷新后保持登录
           user: state.serverApi.user,
+        },
+        sttApi: {
+          provider: state.sttApi.provider,
+          apiKey: '', // STT API Key 也不明文持久化
+          baseUrl: state.sttApi.baseUrl,
+          language: state.sttApi.language,
         },
         theme: state.theme,
         language: state.language,
