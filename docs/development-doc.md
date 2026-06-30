@@ -307,6 +307,12 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - tsconfig.node.json 缺失修复
+
+**问题：** `electron-vite dev` 构建时报错 `ENOENT: no such file or directory, open 'tsconfig.node.json'`
+**原因：** `tsconfig.json` 中 `references` 字段引用了不存在的 `tsconfig.node.json`
+**修复：** 移除 `references` 引用，当前 `tsconfig.json` 的 `include` 已覆盖 `electron/**/*`，不需要单独的 Node 配置
+
 ### 2026年6月30日 - AI错误反馈、退出确认与清空保护修复
 
 **修复的可用性问题（3个）：**
