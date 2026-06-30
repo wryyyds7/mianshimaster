@@ -2,6 +2,7 @@
   "name": "mianshimaster-client",
   "version": "1.0.0",
   "description": "面试大师 - AI辅助问答PC客户端",
+  "type": "module",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

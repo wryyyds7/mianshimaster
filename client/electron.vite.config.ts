@@ -7,6 +7,9 @@ export default defineConfig({
     build: {
       outDir: 'out/main',
       rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'electron/main.ts'),
+        },
         external: ['better-sqlite3'],
       },
     },
@@ -15,6 +18,9 @@ export default defineConfig({
     build: {
       outDir: 'out/preload',
       rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'electron/preload.ts'),
+        },
         external: ['better-sqlite3'],
       },
     },
