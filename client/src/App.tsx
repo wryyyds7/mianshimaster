@@ -16,10 +16,12 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const ContactPage = lazy(() => import('./pages/ContactPage'));
 
 function App() {
-  const { isConfigured, apiMode, serverApi } = useConfigStore();
+  // 直接选择反应式值，避免选择函数引用导致不重新渲染
+  const apiKey = useConfigStore(s => s.localApi.apiKey);
+  const isLoggedIn = useConfigStore(s => s.serverApi.isLoggedIn);
 
-  // 检查是否已配置（本地API或服务器登录）
-  const canAccess = isConfigured() || serverApi.isLoggedIn;
+  // 检查是否已配置（本地API填写了Key 或 服务器已登录）
+  const canAccess = apiKey.length > 0 || isLoggedIn;
 
   return (
     <>

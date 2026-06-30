@@ -307,6 +307,12 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - API配置弹窗无法关闭修复
+
+**问题：** 用户在 API Key 配置弹窗中保存后，弹窗不消失
+**根因：** `App.tsx` 使用 `useConfigStore(s => s.isConfigured)` 选择了函数引用（稳定不变），导致 Zustand 不能检测 `apiKey` 变化触发重渲染
+**修复：** 改为直接选择反应式值 `useConfigStore(s => s.localApi.apiKey)`，Key 变化时自动重渲染，Modal 立即消失
+
 ### 2026年6月30日 - better-sqlite3 Electron原生模块重建
 
 **问题：** Electron 启动时报 `NODE_MODULE_VERSION` 不匹配，better-sqlite3 原生模块编译版本与 Electron 内置 Node.js 不一致
