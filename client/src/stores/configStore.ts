@@ -9,6 +9,7 @@ interface ConfigState {
   sttApi: ISTTApiConfig;
   theme: Theme;
   language: Language;
+  apiVerified: boolean;       // API 已通过连通性测试
 
   // 操作
   setApiMode: (mode: ApiMode) => void;
@@ -19,6 +20,7 @@ interface ConfigState {
   updateSTTConfig: (config: Partial<ISTTApiConfig>) => void;
   setTheme: (theme: Theme) => void;
   setLanguage: (lang: Language) => void;
+  setApiVerified: (verified: boolean) => void;
 
   // 判断
   isConfigured: () => boolean;
@@ -50,6 +52,7 @@ export const useConfigStore = create<ConfigState>()(
       },
       theme: 'system' as Theme,
       language: 'zh-CN' as Language,
+      apiVerified: false,
 
       setApiMode: (mode) => set({ apiMode: mode }),
 
@@ -95,6 +98,8 @@ export const useConfigStore = create<ConfigState>()(
 
       setLanguage: (lang) => set({ language: lang }),
 
+      setApiVerified: (verified) => set({ apiVerified: verified }),
+
       isConfigured: () => {
         const state = get();
         // 必须填写了apiKey才算已配置（custom provider也需要配置）
@@ -123,6 +128,7 @@ export const useConfigStore = create<ConfigState>()(
         },
         theme: state.theme,
         language: state.language,
+        apiVerified: state.apiVerified,
       }),
     }
   )

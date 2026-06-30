@@ -307,6 +307,33 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - API测试模块 + 角色区分 + 使用前验证体系
+
+**新增模块：**
+- **`apiTestService.ts`** — API 连通性测试服务，支持 LLM（发送最小请求验证 Key/BaseURL/模型）和 STT（检查接口可达性），返回成功/失败/延迟/错误详情
+- **`ApiTestPanel.tsx`** — API 测试面板 UI 组件，嵌入 SettingsPage，展示 LLM 和 STT 测试结果卡片（绿/红），支持一键测试全部/单独测试
+- **`configStore` 新增 `apiVerified` 字段** — 持久化标记 API 是否通过测试，侧边栏实时读取显示状态
+
+**角色区分（提问者 / 回答者）：**
+- Workspace 入口新增身份选择按钮：**我是回答者**（默认）/ **我是提问者**
+- 工作台标题栏显示角色标签（回答者 indigo / 提问者 emerald 色）
+- 不同身份显示不同引导说明文字
+
+**API 使用前验证流程：**
+```
+配置API → 设置页测试连通性 → apiVerified=true → 侧边栏绿勾 → 工作台可用
+            ↓ 未测试
+         工作台入口显示⚠️黄色警告 + "前往设置"链接
+         尝试进入 → 弹出 Modal 提醒去测试
+```
+
+**侧边栏 API 状态指示器：**
+| 状态 | 图标 | 颜色 | 文字 |
+|------|------|------|------|
+| 已测试通过 | ✅ CheckCircle2 | 绿色 | API 已激活 |
+| 已配置未测试 | ⚠️ AlertCircle | 黄色 | API 待测试 |
+| 未配置 Key | ❓ HelpCircle | 灰色 | API 未配置 |
+
 ### 2026年6月30日 - 修复 WorkspacePage 条件式 Hook 导致崩溃
 
 **问题：** Agent 界面报错 "Rendered fewer hooks than expected. This may be caused by an accidental early return statement."

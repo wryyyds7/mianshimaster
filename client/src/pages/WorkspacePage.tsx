@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '../stores/sessionStore';
 import { useConfigStore } from '../stores/configStore';
 import { Button } from '../components/ui/Button';
@@ -10,13 +11,15 @@ import AgentChatPanel from '../components/workspace/AgentChatPanel';
 import { aiService } from '../services/aiService';
 import { useAgent } from '../hooks/useAgent';
 import { isSpeechSupported } from '../agent/SpeechInput';
-import { LogOut, Upload, FileText, AlertTriangle, XCircle, Bot, MessageSquare } from 'lucide-react';
+import { LogOut, Upload, FileText, AlertTriangle, XCircle, Bot, MessageSquare, UserCheck, Users, ShieldAlert } from 'lucide-react';
 import type { IFileInfo, IAgentConfig } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
 
 type WorkspaceMode = 'qa' | 'agent';
+type UserRole = 'answerer' | 'questioner';
 
 export default function WorkspacePage() {
+  const navigate = useNavigate();
   const {
     isActive, sessionTitle, backgroundFiles, contextText, questions,
     activeQuestionId, isStreaming,
@@ -25,19 +28,26 @@ export default function WorkspacePage() {
     setSessionTitle, clearFiles,
   } = useSessionStore();
 
-  const { localApi, apiMode, serverApi } = useConfigStore();
+  const { localApi, apiMode, serverApi, apiVerified } = useConfigStore();
   const streamingContent = useSessionStore((s) => s.streamingContent);
   const [showEntrance, setShowEntrance] = useState(!isActive);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>('qa');
+  const [userRole, setUserRole] = useState<UserRole>('answerer');
+  const [showApiWarning, setShowApiWarning] = useState(false);
 
   // Agent hook
   const agent = useAgent();
   const speechSupported = isSpeechSupported();
 
-  // 进入工作台
+  // 进入工作台前检查 API 状态
   const handleEnterWorkspace = (files: IFileInfo[], text: string) => {
+    // 本地模式且未验证 API → 弹窗提醒
+    if (apiMode === 'local' && !apiVerified) {
+      setShowApiWarning(true);
+      return;
+    }
     enterWorkspace(files, text);
     setShowEntrance(false);
   };
@@ -58,8 +68,12 @@ export default function WorkspacePage() {
     setAiError(null);
   };
 
-  // Agent 模式启动
+  // Agent 模式启动（同样需要 API 验证）
   const handleStartAgent = (files: IFileInfo[], text: string) => {
+    if (apiMode === 'local' && !apiVerified) {
+      setShowApiWarning(true);
+      return;
+    }
     enterWorkspace(files, text);
     setWorkspaceMode('agent');
     setShowEntrance(false);
@@ -154,12 +168,62 @@ export default function WorkspacePage() {
             <Upload className="w-10 h-10 text-indigo-600 dark:text-indigo-400" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-            AI 问答工作台
+            AI 面试工作台
           </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-8">
-            上传背景文件作为AI的上下文参考，然后开始回答提问者的问题。
-            你的身份固定为回答者。
+
+          {/* 身份选择 */}
+          <div className="mb-6">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">选择你的身份：</p>
+            <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+              <button
+                onClick={() => setUserRole('answerer')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  userRole === 'answerer'
+                    ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <UserCheck className="w-4 h-4" />
+                我是回答者
+              </button>
+              <button
+                onClick={() => setUserRole('questioner')}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium rounded-md transition-colors ${
+                  userRole === 'questioner'
+                    ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                我是提问者
+              </button>
+            </div>
+          </div>
+
+          {/* 角色说明 */}
+          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">
+            {userRole === 'answerer'
+              ? '你会收到提问者的问题，AI 将辅助你生成专业的回答'
+              : '你可以向回答者提问，AI 会自动生成参考回答并辅助你判断'}
           </p>
+
+          {/* API 未验证警告 */}
+          {apiMode === 'local' && !apiVerified && (
+            <div className="flex items-start gap-2 p-3 mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-left">
+              <ShieldAlert className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+              <div className="text-xs text-amber-700 dark:text-amber-300">
+                <p className="font-medium mb-0.5">API 尚未验证</p>
+                <p>请先到「设置」页面测试 API 连通性后再使用工作台</p>
+                <button
+                  onClick={() => navigate('/settings')}
+                  className="mt-1.5 text-amber-600 dark:text-amber-400 underline hover:no-underline"
+                >
+                  前往设置 →
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col gap-3">
             <Button size="lg" onClick={() => {
               setWorkspaceMode('qa');
@@ -177,6 +241,35 @@ export default function WorkspacePage() {
             </Button>
           </div>
         </div>
+
+        {/* API 验证警告弹窗 */}
+        <Modal
+          open={showApiWarning}
+          onClose={() => setShowApiWarning(false)}
+          title="API 未验证"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-6">
+              <ShieldAlert className="w-6 h-6 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">
+                  使用工作台前建议先验证 API 连通性
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  未测试的 API 配置可能导致使用时失败，建议先到设置页面完成连通性测试。
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowApiWarning(false)}>
+                返回
+              </Button>
+              <Button onClick={() => { setShowApiWarning(false); navigate('/settings'); }}>
+                去测试 API
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* 退出确认弹窗 */}
         <Modal
@@ -238,8 +331,18 @@ export default function WorkspacePage() {
       <div className="h-12 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex items-center justify-between px-4 shrink-0">
         <div className="flex items-center gap-3">
           <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-            {sessionTitle || (workspaceMode === 'agent' ? 'Agent 模拟面试' : '回答工作台')}
+            {sessionTitle || (workspaceMode === 'agent' ? 'Agent 模拟面试' : '问答工作台')}
           </h2>
+
+          {/* 身份角色标签 */}
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wide ${
+            userRole === 'answerer'
+              ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+              : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'
+          }`}>
+            {userRole === 'answerer' ? '回答者' : '提问者'}
+          </span>
+
           {/* 模式切换 */}
           <div className="flex rounded-md bg-gray-100 dark:bg-gray-700 p-0.5">
             <button

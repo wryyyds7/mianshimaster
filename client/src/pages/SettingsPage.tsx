@@ -5,6 +5,7 @@ import { cn } from '../utils/cn';
 import { useConfigStore } from '../stores/configStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
+import ApiTestPanel from '../components/settings/ApiTestPanel';
 import { DEFAULT_MODELS, API_PROVIDERS } from '../utils/constants';
 import { Server, Key, Globe, Cpu, Languages, Download, Database, ArrowLeft, Mic } from 'lucide-react';
 
@@ -295,6 +296,11 @@ export default function SettingsPage() {
                   : '腾讯云 ASR 中文效果最佳，需要腾讯云账号'}
             </p>
           </section>
+        )}
+
+        {/* ========== 自己配置模式：API 连通性测试 ========== */}
+        {apiMode === 'local' && (
+          <ApiTestPanel />
         )}
 
         {/* ========== 外观与语言 ========== */}

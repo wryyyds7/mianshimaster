@@ -18,6 +18,9 @@ import {
   Wifi,
   WifiOff,
   Loader2,
+  CheckCircle2,
+  AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 
 const navigation = [
@@ -31,7 +34,7 @@ const navigation = [
 
 export default function AppLayout() {
   const navigate = useNavigate();
-  const { theme, setTheme, apiMode, serverApi, clearServerSession, setApiMode } = useConfigStore();
+  const { theme, setTheme, apiMode, serverApi, clearServerSession, setApiMode, localApi, apiVerified } = useConfigStore();
   const isActive = useSessionStore((s) => s.isActive);
   const [checking, setChecking] = useState(false);
   const [serverOnline, setServerOnline] = useState<boolean | null>(null);
@@ -104,6 +107,40 @@ export default function AppLayout() {
 
           {/* 底部信息 */}
           <div className="p-3 border-t border-gray-200 dark:border-gray-700 space-y-1">
+            {/* API 激活状态 */}
+            <div
+              className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm"
+              title={
+                apiVerified
+                  ? 'API 已通过连通性测试'
+                  : localApi.apiKey
+                    ? 'API 已配置但未测试，建议前往设置页测试连接'
+                    : '未配置 API Key，请前往设置页配置'
+              }
+            >
+              {apiVerified ? (
+                <CheckCircle2 className="w-4 h-4 text-green-500" />
+              ) : localApi.apiKey ? (
+                <AlertCircle className="w-4 h-4 text-yellow-500" />
+              ) : (
+                <HelpCircle className="w-4 h-4 text-gray-400" />
+              )}
+              <span className={cn(
+                'text-xs truncate',
+                apiVerified
+                  ? 'text-green-600 dark:text-green-400'
+                  : localApi.apiKey
+                    ? 'text-yellow-600 dark:text-yellow-400'
+                    : 'text-gray-400',
+              )}>
+                {apiVerified
+                  ? 'API 已激活'
+                  : localApi.apiKey
+                    ? 'API 待测试'
+                    : 'API 未配置'}
+              </span>
+            </div>
+
             {/* 服务器连接状态 */}
             {apiMode === 'server' && (
               <button
