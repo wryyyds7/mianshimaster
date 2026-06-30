@@ -26,6 +26,7 @@ export default function WorkspacePage() {
   } = useSessionStore();
 
   const { localApi, apiMode, serverApi } = useConfigStore();
+  const streamingContent = useSessionStore((s) => s.streamingContent);
   const [showEntrance, setShowEntrance] = useState(!isActive);
   const [aiError, setAiError] = useState<string | null>(null);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
@@ -342,7 +343,7 @@ export default function WorkspacePage() {
               <ChatDetail
                 question={questions.find(q => q.id === activeQuestionId) || null}
                 isStreaming={isStreaming}
-                streamingContent={useSessionStore((s) => s.streamingContent)}
+                streamingContent={streamingContent}
               />
             </div>
           </>

@@ -307,6 +307,12 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - 修复 WorkspacePage 条件式 Hook 导致崩溃
+
+**问题：** Agent 界面报错 "Rendered fewer hooks than expected. This may be caused by an accidental early return statement."
+**根因：** `WorkspacePage.tsx` 第 345 行存在 JSX 内联 hook 调用 `{useSessionStore((s) => s.streamingContent)}`，该 hook 位于 `if (!isActive)` 的 early return 之后，导致 `isActive` 变化时 hooks 调用次数不一致。
+**修复：** 将 `streamingContent` 提取到组件顶层，在所有条件分支之前调用 `useSessionStore`。
+
 ### 2026年6月30日 - 设置页重构 + 导入路径修复 + 错误边界
 
 **问题：**
