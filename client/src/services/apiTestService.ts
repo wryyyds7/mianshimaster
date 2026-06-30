@@ -1,15 +1,18 @@
 /**
  * API 连通性测试服务
  * 用于验证 LLM 大模型和 STT 语音识别的 API Key / Base URL 是否可用
+ * 
+ * 使用 API 适配器系统自动生成符合各提供商格式规范的测试请求
  */
 import type { ILocalApiConfig, ISTTApiConfig } from '@shared/types';
+import { getAdapter } from './api-adapters';
 
 export interface ApiTestResult {
   success: boolean;
   latencyMs: number;
   message: string;
-  model?: string;       // 测试时实际使用的模型名
-  provider?: string;    // 提供商
+  model?: string;
+  provider?: string;
 }
 
 export interface SttTestResult {
@@ -28,38 +31,37 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
   const testMessage = [{ role: 'user' as const, content: '请回复两个字：OK' }];
 
   try {
-    // 针对 Claude 的 baseUrl 做适配（Anthropic 使用 /messages 端点）
-    const isClaude = config.baseUrl.includes('anthropic.com');
-    const endpoint = isClaude
-      ? `${config.baseUrl}/messages`
-      : `${config.baseUrl}/chat/completions`;
+    // 使用适配器自动生成完整请求配置
+    const provider = config.provider === 'claude' ? 'anthropic' : config.provider;
+    const adapter = getAdapter(provider);
+    if (!adapter) {
+      const latencyMs = Math.round(performance.now() - startTime);
+      return {
+        success: false, latencyMs,
+        message: `不支持的提供商: ${provider}`,
+        model: config.model, provider: config.provider,
+      };
+    }
+
+    const endpoint = adapter.buildEndpoint(config.baseUrl);
+    const authHeaders = adapter.buildAuthHeaders(config.apiKey);
+    const requestBody = adapter.buildRequestBody({
+      model: config.model,
+      messages: testMessage,
+      maxTokens: 10,
+      temperature: 0,
+      stream: false,
+    });
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      // OpenAI 兼容格式用 Bearer，Anthropic 用 x-api-key
-      ...(isClaude
-        ? { 'x-api-key': config.apiKey, 'anthropic-version': '2023-06-01' }
-        : { Authorization: `Bearer ${config.apiKey}` }),
+      ...authHeaders,
     };
-
-    const body = isClaude
-      ? JSON.stringify({
-          model: config.model,
-          max_tokens: 10,
-          messages: testMessage,
-        })
-      : JSON.stringify({
-          model: config.model,
-          messages: testMessage,
-          max_tokens: 10,
-          temperature: 0,
-          stream: false,
-        });
 
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
-      body,
+      body: JSON.stringify(requestBody),
       signal: AbortSignal.timeout(15000),
     });
 
@@ -72,6 +74,7 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
       else if (response.status === 403) errMsg = 'API Key 无权限（403 Forbidden）';
       else if (response.status === 404) errMsg = '接口地址错误（404 Not Found）';
       else if (response.status === 429) errMsg = '请求频率超限（429 Too Many Requests）';
+      else if (response.status === 405) errMsg = '接口不支持（405 Method Not Allowed），请检查 Base URL';
       else {
         try {
           const json = JSON.parse(errorBody);
@@ -84,10 +87,7 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
     }
 
     const data = await response.json();
-    // 检查返回内容是否包含 OK（简单的有效性验证）
-    const content = isClaude
-      ? data.content?.[0]?.text || ''
-      : data.choices?.[0]?.message?.content || '';
+    const content = adapter.parseResponse(data);
 
     if (!content) {
       return {
@@ -129,7 +129,6 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
 
 /**
  * 测试 STT 语音识别 API 连通性
- * 仅对需要 API Key 的提供商测试
  */
 export async function testSttApi(config: ISTTApiConfig): Promise<SttTestResult> {
   const startTime = performance.now();
@@ -145,7 +144,6 @@ export async function testSttApi(config: ISTTApiConfig): Promise<SttTestResult> 
 
   try {
     if (config.provider === 'openai-whisper') {
-      // Whisper: 尝试调用 /models 端点验证 Key（不真正上传音频）
       const resp = await fetch(`${config.baseUrl || 'https://api.openai.com/v1'}/models`, {
         headers: { Authorization: `Bearer ${config.apiKey}` },
         signal: AbortSignal.timeout(10000),
@@ -161,14 +159,12 @@ export async function testSttApi(config: ISTTApiConfig): Promise<SttTestResult> 
     }
 
     if (config.provider === 'tencent-asr') {
-      // 腾讯云 ASR: 简单校验 baseUrl 可达
       const resp = await fetch(config.baseUrl || 'https://asr.tencentcloudapi.com', {
         method: 'HEAD',
         signal: AbortSignal.timeout(10000),
       });
       const latencyMs = Math.round(performance.now() - startTime);
       if (resp.ok || resp.status === 405) {
-        // 405 Method Not Allowed 也算可达（HEAD 不被支持但域名存在）
         return { success: true, latencyMs, message: '腾讯云 ASR 接口可达', provider: config.provider };
       }
       return { success: false, latencyMs, message: `HTTP ${resp.status}`, provider: config.provider };

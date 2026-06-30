@@ -257,6 +257,54 @@ main          ← 生产分支（受保护）
 
 ## 七、更新日志
 
+### 2026年6月30日 - 多API适配器架构 + 格式自动生成 + 可视化预览
+
+**架构概述：**
+实现了一个声明式的多 API 适配器系统，覆盖 6 大主流 LLM API 提供商，系统能根据用户选择的 API 自动生成符合标准格式的完整请求配置。
+
+**新增模块：**
+
+| 文件 | 职责 |
+|------|------|
+| `services/api-adapters/types.ts` | 适配器接口定义：认证方式/请求构建/响应解析/流式配置 |
+| `services/api-adapters/registry.ts` | 6 大提供商注册表：OpenAI/Anthropic/DeepSeek/Gemini/Ollama/Moonshot |
+| `services/api-adapters/index.ts` | 统一导出 |
+| `components/settings/ApiFormatPreview.tsx` | 可视化预览面板：展示端点/认证头/请求体/解析代码 |
+
+**支持的 API 格式规范对照：**
+
+| 提供商 | 端点 | 认证方式 | 流式格式 | 特殊说明 |
+|--------|------|---------|---------|---------|
+| **OpenAI** | `/v1/chat/completions` | Bearer Token | SSE `[DONE]` | 标准 OpenAPI 格式 |
+| **Anthropic Claude** | `/v1/messages` | x-api-key + version | SSE `message_stop` | system 独立于 messages |
+| **DeepSeek** | `/chat/completions` | Bearer Token | SSE `[DONE]` | OpenAI 兼容 + thinking 参数 |
+| **Google Gemini** | `/models/{m}:generateContent` | Bearer | SSE 无 done 标记 | role=model, systemInstruction |
+| **Ollama** | `/api/chat` | 无 | NDJSON | maxTokens→num_predict |
+| **月之暗面 Kimi** | `/v1/chat/completions` | Bearer Token | SSE `[DONE]` | 标准 OpenAI 兼容 |
+
+**重构文件：**
+
+| 文件 | 修改内容 |
+|------|---------|
+| `shared/types/index.ts` | `LLMProvider` 联合类型扩展为 8 种提供商 |
+| `services/aiService.ts` | 全面改用适配器驱动：请求构建/响应解析/流式读取均由适配器自动生成；新增 NDJSON 流式支持 (Ollama) |
+| `services/apiTestService.ts` | 测试请求全面改用适配器生成，移除硬编码的 `anthropic.com` 判断 |
+| `utils/constants.ts` | `API_PROVIDERS` / `DEFAULT_MODELS` 从适配器注册表动态聚合 |
+| `SettingsPage.tsx` | 集成 `ApiFormatPreview` 可视化面板；提供商切换时自动联动 baseUrl + 模型 |
+
+**设计原则：**
+```
+用户选择 API → 适配器自动生成：
+  ├─ buildEndpoint()     → POST https://api.xxx.com/...
+  ├─ buildAuthHeaders()  → { Authorization: 'Bearer ...' }
+  ├─ buildRequestBody()  → { model: '...', messages: [...] }
+  ├─ parseResponse()     → 非流式 JSON 内容提取
+  ├─ parseStreamChunk()  → SSE/NDJSON 增量文本提取
+  └─ describe()          → ApiFormatPreview 展示用结构化信息
+
+新增 API 只需在 registry.ts 注册一个对象，无需修改业务代码。
+```
+
 ### 2025年6月29日 - 全功能审计与修复
 
 **修复的严重Bug：**

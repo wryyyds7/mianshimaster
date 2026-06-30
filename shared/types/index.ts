@@ -66,8 +66,11 @@ export interface IKnowledgeItem {
 // ========== 配置类型 ==========
 export type ApiMode = 'local' | 'server';
 
+/** 支持的 LLM API 提供商 */
+export type LLMProvider = 'openai' | 'anthropic' | 'claude' | 'deepseek' | 'gemini' | 'ollama' | 'moonshot' | 'custom';
+
 export interface ILocalApiConfig {
-  provider: 'openai' | 'claude' | 'custom';
+  provider: LLMProvider;
   apiKey: string;
   baseUrl: string;
   model: string;

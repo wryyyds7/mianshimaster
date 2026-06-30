@@ -6,6 +6,7 @@ import { useConfigStore } from '../stores/configStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
 import ApiTestPanel from '../components/settings/ApiTestPanel';
+import ApiFormatPreview from '../components/settings/ApiFormatPreview';
 import { DEFAULT_MODELS, API_PROVIDERS, getDefaultModel } from '../utils/constants';
 import { Server, Key, Globe, Cpu, Languages, Download, Database, ArrowLeft, Mic } from 'lucide-react';
 
@@ -195,7 +196,7 @@ export default function SettingsPage() {
               />
             </div>
 
-            {/* 模型选择 */}
+            {/* 模型选择 —— 按当前提供商过滤 */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
                 <Cpu className="w-3.5 h-3.5" />
@@ -228,6 +229,11 @@ export default function SettingsPage() {
               />
             </div>
           </section>
+        )}
+
+        {/* ========== API 格式预览（仅自己配置模式）========== */}
+        {apiMode === 'local' && (
+          <ApiFormatPreview config={localApi} />
         )}
 
         {/* ========== 自己配置模式：STT 语音识别 ========== */}

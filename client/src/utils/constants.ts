@@ -12,31 +12,33 @@ export const ALLOWED_FILE_TYPES = [
 export const ALLOWED_FILE_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md'];
 export const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-export const DEFAULT_MODELS = [
-  { value: 'gpt-4o', label: 'GPT-4o', provider: 'openai' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo', provider: 'openai' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', provider: 'openai' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', provider: 'claude' },
-  { value: 'claude-3-opus', label: 'Claude 3 Opus', provider: 'claude' },
-  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', provider: 'deepseek' },
-  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek' },
-  { value: 'deepseek-chat', label: 'DeepSeek Chat (即将弃用)', provider: 'deepseek' },
-  { value: 'custom', label: '自定义模型', provider: 'custom' },
-];
+/**
+ * 模型列表、提供商列表 —— 从 API 适配器注册表动态聚合
+ * 新增提供商只需在 api-adapters/registry.ts 注册，此处自动同步。
+ */
+import { API_ADAPTERS, getDefaultModelForProvider } from '../services/api-adapters';
 
-export const API_PROVIDERS = [
-  { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
-  { value: 'claude', label: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1' },
-  { value: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com' },
-  { value: 'custom', label: '自定义兼容接口', baseUrl: '' },
-];
+/** 提供商下拉选项 */
+export const API_PROVIDERS = API_ADAPTERS.map(a => ({
+  value: a.provider,
+  label: a.label,
+  baseUrl: a.baseUrl,
+}));
 
-/** 根据 provider 获取默认模型 */
+/** 全部模型下拉选项（跨提供商聚合） */
+export const DEFAULT_MODELS = API_ADAPTERS.flatMap(a =>
+  a.models.map(m => ({
+    value: m.value,
+    label: m.label + (m.deprecated ? ' (弃用)' : ''),
+    provider: a.provider,
+  }))
+);
+
+/**
+ * 根据 provider 获取默认模型
+ * 兼容旧版 provider='claude' → 映射为新版 'anthropic'
+ */
 export function getDefaultModel(provider: string): string {
-  switch (provider) {
-    case 'openai': return 'gpt-4o';
-    case 'claude': return 'claude-3.5-sonnet';
-    case 'deepseek': return 'deepseek-v4-flash';
-    default: return 'custom';
-  }
+  const p = provider === 'claude' ? 'anthropic' : provider;
+  return getDefaultModelForProvider(p);
 }
