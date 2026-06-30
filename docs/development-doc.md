@@ -307,6 +307,14 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - better-sqlite3 Electron原生模块重建
+
+**问题：** Electron 启动时报 `NODE_MODULE_VERSION` 不匹配，better-sqlite3 原生模块编译版本与 Electron 内置 Node.js 不一致
+**修复：**
+- 使用 `electron-rebuild` 重新编译 better-sqlite3 适配 Electron 的 Node.js 版本
+- 添加 `@electron/rebuild` 为 devDependencies
+- 添加 `postinstall` 脚本自动执行重建，确保每次 `npm install` 后模块都是正确版本
+
 ### 2026年6月30日 - tsconfig.node.json 缺失修复
 
 **问题：** `electron-vite dev` 构建时报错 `ENOENT: no such file or directory, open 'tsconfig.node.json'`

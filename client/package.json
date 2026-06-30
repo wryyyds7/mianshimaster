@@ -9,6 +9,7 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "package": "electron-builder",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .ts,.tsx"
   },
@@ -35,6 +36,7 @@
     "zustand": "^4.5.5"
   },
   "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
     "@electron-toolkit/eslint-config-ts": "^2.0.0",
     "@electron-toolkit/tsconfig": "^1.0.1",
     "@types/better-sqlite3": "^7.6.11",
