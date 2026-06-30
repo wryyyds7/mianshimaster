@@ -18,12 +18,25 @@ export const DEFAULT_MODELS = [
   { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo', provider: 'openai' },
   { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', provider: 'claude' },
   { value: 'claude-3-opus', label: 'Claude 3 Opus', provider: 'claude' },
-  { value: 'deepseek-chat', label: 'DeepSeek Chat', provider: 'custom' },
+  { value: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', provider: 'deepseek' },
+  { value: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', provider: 'deepseek' },
+  { value: 'deepseek-chat', label: 'DeepSeek Chat (即将弃用)', provider: 'deepseek' },
   { value: 'custom', label: '自定义模型', provider: 'custom' },
 ];
 
 export const API_PROVIDERS = [
   { value: 'openai', label: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
   { value: 'claude', label: 'Anthropic Claude', baseUrl: 'https://api.anthropic.com/v1' },
+  { value: 'deepseek', label: 'DeepSeek', baseUrl: 'https://api.deepseek.com' },
   { value: 'custom', label: '自定义兼容接口', baseUrl: '' },
 ];
+
+/** 根据 provider 获取默认模型 */
+export function getDefaultModel(provider: string): string {
+  switch (provider) {
+    case 'openai': return 'gpt-4o';
+    case 'claude': return 'claude-3.5-sonnet';
+    case 'deepseek': return 'deepseek-v4-flash';
+    default: return 'custom';
+  }
+}

@@ -307,6 +307,30 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - DeepSeek API 支持 + API Key 本地持久化
+
+**问题分析（4个配置缺陷）：**
+1. `API_PROVIDERS` 只有 OpenAI / Claude / 自定义，无 DeepSeek 选项；DeepSeek 与 OpenAI/Claude 的 baseUrl 格式完全不同
+2. DeepSeek 模型 `deepseek-chat` 即将于 2026/07/24 弃用，缺少新模型 `deepseek-v4-flash` / `deepseek-v4-pro`
+3. `configStore.partialize` 将 `apiKey` 设为空字符串，每次刷新页面 Key 丢失，用户需反复填写
+4. 切换提供商时不会自动更新 baseUrl 和模型名
+
+**修复：**
+
+| 文件 | 修改内容 |
+|------|---------|
+| `constants.ts` | 新增 `deepseek` 提供商（baseUrl `https://api.deepseek.com`）；模型新增 `deepseek-v4-flash` / `deepseek-v4-pro`，`deepseek-chat` 标记为即将弃用；新增 `getDefaultModel()` 辅助函数 |
+| `configStore.ts` | `partialize` 移除 `apiKey: ''` 清空逻辑，LLM Key 和 STT Key 均持久化到 localStorage |
+| `SettingsPage.tsx` | 提供商选择 `onChange` 时联动自动更新 baseUrl + 模型名（调用 `getDefaultModel`） |
+
+**DeepSeek API 接入说明：**
+```
+baseUrl: https://api.deepseek.com              ← 不要带 /v1
+端点:   {baseUrl}/chat/completions             ← 自动拼接，与 OpenAI SDK 兼容
+认证:   Authorization: Bearer {apiKey}          ← 标准 Bearer Token
+模型:   deepseek-v4-flash / deepseek-v4-pro
+```
+
 ### 2026年6月30日 - API测试模块 + 角色区分 + 使用前验证体系
 
 **新增模块：**

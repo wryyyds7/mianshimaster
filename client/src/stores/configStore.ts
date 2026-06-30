@@ -112,7 +112,7 @@ export const useConfigStore = create<ConfigState>()(
         apiMode: state.apiMode,
         localApi: {
           ...state.localApi,
-          apiKey: '', // API Key不持久化明文（实际使用时加密存储）
+          // API Key 持久化到本地存储（基于 zustand persist，生产环境建议加密）
         },
         serverApi: {
           baseUrl: state.serverApi.baseUrl,
@@ -121,10 +121,8 @@ export const useConfigStore = create<ConfigState>()(
           user: state.serverApi.user,
         },
         sttApi: {
-          provider: state.sttApi.provider,
-          apiKey: '', // STT API Key 也不明文持久化
-          baseUrl: state.sttApi.baseUrl,
-          language: state.sttApi.language,
+          ...state.sttApi,
+          // STT API Key 也持久化
         },
         theme: state.theme,
         language: state.language,

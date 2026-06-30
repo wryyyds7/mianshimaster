@@ -6,7 +6,7 @@ import { useConfigStore } from '../stores/configStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
 import ApiTestPanel from '../components/settings/ApiTestPanel';
-import { DEFAULT_MODELS, API_PROVIDERS } from '../utils/constants';
+import { DEFAULT_MODELS, API_PROVIDERS, getDefaultModel } from '../utils/constants';
 import { Server, Key, Globe, Cpu, Languages, Download, Database, ArrowLeft, Mic } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -143,7 +143,15 @@ export default function SettingsPage() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">提供商</label>
               <select
                 value={localApi.provider}
-                onChange={(e) => updateLocalApiConfig({ provider: e.target.value as any })}
+                onChange={(e) => {
+                  const newProvider = e.target.value;
+                  const providerInfo = API_PROVIDERS.find(p => p.value === newProvider);
+                  updateLocalApiConfig({
+                    provider: newProvider as any,
+                    ...(providerInfo?.baseUrl ? { baseUrl: providerInfo.baseUrl } : {}),
+                    model: getDefaultModel(newProvider),
+                  });
+                }}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 {API_PROVIDERS.map((p) => (
