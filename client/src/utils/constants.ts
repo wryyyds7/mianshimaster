@@ -35,6 +35,15 @@ export const DEFAULT_MODELS = API_ADAPTERS.flatMap(a =>
 );
 
 /**
+ * 根据当前提供商获取可选的模型列表
+ * @param provider 当前选中的提供商
+ */
+export function getModelsForProvider(provider: string): typeof DEFAULT_MODELS {
+  const p = provider === 'claude' ? 'anthropic' : provider;
+  return DEFAULT_MODELS.filter(m => m.provider === p);
+}
+
+/**
  * 根据 provider 获取默认模型
  * 兼容旧版 provider='claude' → 映射为新版 'anthropic'
  */

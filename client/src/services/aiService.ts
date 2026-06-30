@@ -36,7 +36,7 @@ class AIService {
       });
 
       const authHeaders = adapter.buildAuthHeaders(config.apiKey);
-      const endpoint = adapter.buildEndpoint(config.baseUrl);
+      const endpoint = adapter.buildEndpoint(config.baseUrl, config.model, true);
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -217,7 +217,7 @@ class AIService {
     });
 
     const authHeaders = adapter.buildAuthHeaders(config.apiKey);
-    const endpoint = adapter.buildEndpoint(config.baseUrl);
+    const endpoint = adapter.buildEndpoint(config.baseUrl, config.model);
 
     const response = await fetch(endpoint, {
       method: 'POST',

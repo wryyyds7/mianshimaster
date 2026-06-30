@@ -25,7 +25,7 @@ export default function ApiFormatPreview({ config }: Props) {
 
   // 生成实际的示例配置
   const desc = adapter?.describe();
-  const endpoint = adapter?.buildEndpoint(config.baseUrl || adapter.baseUrl) || '';
+  const endpoint = adapter?.buildEndpoint(config.baseUrl || adapter.baseUrl, config.model || adapter.defaultModel) || '';
   const authHeaders = adapter?.buildAuthHeaders('{your_api_key}') || {};
   const requestBody = adapter?.buildRequestBody({
     model: config.model || adapter.defaultModel,

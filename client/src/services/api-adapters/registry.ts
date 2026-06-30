@@ -68,7 +68,7 @@ const openaiAdapter: IApiAdapter = {
 
   buildAuthHeaders: bearerHeaders,
 
-  buildEndpoint(baseUrl: string) {
+  buildEndpoint(baseUrl: string, _model?: string) {
     return `${baseUrl}/chat/completions`;
   },
 
@@ -138,7 +138,7 @@ const anthropicAdapter: IApiAdapter = {
     };
   },
 
-  buildEndpoint(baseUrl: string) {
+  buildEndpoint(baseUrl: string, _model?: string) {
     return `${baseUrl}/messages`;
   },
 
@@ -249,7 +249,7 @@ const deepseekAdapter: IApiAdapter = {
 
   buildAuthHeaders: bearerHeaders,
 
-  buildEndpoint(baseUrl: string) {
+  buildEndpoint(baseUrl: string, _model?: string) {
     return `${baseUrl}/chat/completions`;
   },
 
@@ -335,8 +335,11 @@ const geminiAdapter: IApiAdapter = {
   },
 
   // 备用认证：query-param 方式 (x-goog-api-key 或 ?key=)
-  buildEndpoint(baseUrl: string) {
-    return `${baseUrl}/models`;
+  // Gemini 端点格式: /models/{model}:generateContent (非流式) 或 /models/{model}:streamGenerateContent?alt=sse (流式)
+  buildEndpoint(baseUrl: string, model?: string, stream?: boolean) {
+    const m = model || 'gemini-2.5-flash';
+    const suffix = stream ? `:streamGenerateContent?alt=sse` : ':generateContent';
+    return `${baseUrl}/models/${m}${suffix}`;
   },
 
   buildRequestBody(params: RequestBuildParams) {
@@ -399,7 +402,7 @@ const geminiAdapter: IApiAdapter = {
     return {
       provider: 'gemini',
       label: 'Google Gemini',
-      endpoint: `${this.baseUrl}/models/{model}:streamGenerateContent?alt=sse`,
+      endpoint: `${this.baseUrl}/models/{model}:generateContent`,
       authType: 'Bearer Token 或 API Key',
       authHeaderExample: 'Authorization: Bearer {apiKey}',
       requestHeaders: {
@@ -456,7 +459,7 @@ const ollamaAdapter: IApiAdapter = {
     return {};  // Ollama 本地运行，无需认证
   },
 
-  buildEndpoint(baseUrl: string) {
+  buildEndpoint(baseUrl: string, _model?: string) {
     return `${baseUrl}/api/chat`;
   },
 
@@ -542,7 +545,7 @@ const moonshotAdapter: IApiAdapter = {
 
   buildAuthHeaders: bearerHeaders,
 
-  buildEndpoint(baseUrl: string) {
+  buildEndpoint(baseUrl: string, _model?: string) {
     return `${baseUrl}/chat/completions`;
   },
 

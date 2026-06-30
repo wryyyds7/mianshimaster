@@ -257,6 +257,29 @@ main          ← 生产分支（受保护）
 
 ## 七、更新日志
 
+### 2026年6月30日10时 - 修复Gemini端点 + 自动填充全字段 + 模型按提供商过滤
+
+**问题修复：**
+
+| 问题 | 描述 | 修复 |
+|------|------|------|
+| **Gemini 端点缺少模型名** | `buildEndpoint` 仅返回 `/models`，缺少实际模型名 | 接口增加 `model` 和 `stream` 参数；Gemini 适配器正确构建 `/models/{m}:generateContent` 或 `/models/{m}:streamGenerateContent?alt=sse` |
+| **切换提供商不自动填充全部字段** | 切换提供商仅更新 baseUrl 和 model | 现在同时自动填充 temperature=0.7, maxTokens=4096 |
+| **模型下拉框不按提供商过滤** | 显示所有提供商的全部模型列表 | 新增 `getModelsForProvider()`，下拉框仅显示当前提供商的模型 |
+| **Ollama 需要 API Key** | Ollama 本地运行不需要 API Key，但仍提示填写 | Ollama 选中时 API Key 输入框禁用，显示"本地运行无需填写" |
+
+**新增/修改文件：**
+
+| 文件 | 变更 |
+|------|------|
+| `api-adapters/types.ts` | `buildEndpoint(baseUrl, model?, stream?)` 增加 model 和 stream 参数 |
+| `api-adapters/registry.ts` | 所有适配器 `buildEndpoint` 适配新签名；Gemini 端点嵌入模型名 + 支持流式端点切换 |
+| `aiService.ts` | 两处 `buildEndpoint` 调用传入 model；streamChat 额外传入 `stream: true` |
+| `apiTestService.ts` | 测试调用传入 model 参数 |
+| `ApiFormatPreview.tsx` | 预览端点传入 model 参数 |
+| `constants.ts` | 新增 `getModelsForProvider(provider)` 导出 |
+| `SettingsPage.tsx` | ①切换提供商自动填充全部字段 ②模型下拉按提供商过滤 ③API Key/Based URL 占位符动态适配当前提供商 |
+
 ### 2026年6月30日 - 多API适配器架构 + 格式自动生成 + 可视化预览
 
 **架构概述：**

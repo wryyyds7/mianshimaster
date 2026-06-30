@@ -43,7 +43,7 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
       };
     }
 
-    const endpoint = adapter.buildEndpoint(config.baseUrl);
+    const endpoint = adapter.buildEndpoint(config.baseUrl, config.model);
     const authHeaders = adapter.buildAuthHeaders(config.apiKey);
     const requestBody = adapter.buildRequestBody({
       model: config.model,

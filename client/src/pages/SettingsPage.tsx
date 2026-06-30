@@ -7,7 +7,7 @@ import { useSessionStore } from '../stores/sessionStore';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
 import ApiTestPanel from '../components/settings/ApiTestPanel';
 import ApiFormatPreview from '../components/settings/ApiFormatPreview';
-import { DEFAULT_MODELS, API_PROVIDERS, getDefaultModel } from '../utils/constants';
+import { DEFAULT_MODELS, API_PROVIDERS, getDefaultModel, getModelsForProvider } from '../utils/constants';
 import { Server, Key, Globe, Cpu, Languages, Download, Database, ArrowLeft, Mic } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -147,10 +147,13 @@ export default function SettingsPage() {
                 onChange={(e) => {
                   const newProvider = e.target.value;
                   const providerInfo = API_PROVIDERS.find(p => p.value === newProvider);
+                  // 自动填充除了 API Key 之外的全部字段
                   updateLocalApiConfig({
                     provider: newProvider as any,
-                    ...(providerInfo?.baseUrl ? { baseUrl: providerInfo.baseUrl } : {}),
+                    baseUrl: providerInfo?.baseUrl || 'https://api.openai.com/v1',
                     model: getDefaultModel(newProvider),
+                    temperature: 0.7,
+                    maxTokens: 4096,
                   });
                 }}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -163,14 +166,24 @@ export default function SettingsPage() {
 
             {/* API Key */}
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">API Key</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                API Key
+                {localApi.provider === 'ollama' && (
+                  <span className="ml-1 text-xs text-gray-400 font-normal">（本地运行无需填写）</span>
+                )}
+              </label>
               <div className="relative">
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={localApi.apiKey}
                   onChange={(e) => updateLocalApiConfig({ apiKey: e.target.value })}
-                  placeholder="sk-..."
-                  className="w-full h-10 px-3 pr-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder={
+                    localApi.provider === 'ollama' ? '本地运行无需 API Key'
+                    : localApi.provider === 'anthropic' ? 'sk-ant-...'
+                    : 'sk-...'
+                  }
+                  disabled={localApi.provider === 'ollama'}
+                  className="w-full h-10 px-3 pr-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:text-gray-400"
                 />
                 <button
                   onClick={() => setShowApiKey(!showApiKey)}
@@ -191,7 +204,7 @@ export default function SettingsPage() {
                 type="text"
                 value={localApi.baseUrl}
                 onChange={(e) => updateLocalApiConfig({ baseUrl: e.target.value })}
-                placeholder="https://api.openai.com/v1"
+                placeholder={API_PROVIDERS.find(p => p.value === localApi.provider)?.baseUrl || 'https://api.openai.com/v1'}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               />
             </div>
@@ -207,7 +220,7 @@ export default function SettingsPage() {
                 onChange={(e) => updateLocalApiConfig({ model: e.target.value })}
                 className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                {DEFAULT_MODELS.map((m) => (
+                {getModelsForProvider(localApi.provider).map((m) => (
                   <option key={m.value} value={m.value}>{m.label}</option>
                 ))}
               </select>

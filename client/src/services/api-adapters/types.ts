@@ -51,8 +51,10 @@ export interface IApiAdapter {
   /** 
    * 构建请求端点 URL
    * @param baseUrl 用户配置的 baseUrl
+   * @param model 模型名（Gemini 等部分 API 需要把模型嵌入 URL 路径）
+   * @param stream 是否流式（Gemini 流式需要 :streamGenerateContent?alt=sse 后缀）
    */
-  buildEndpoint(baseUrl: string): string;
+  buildEndpoint(baseUrl: string, model?: string, stream?: boolean): string;
 
   /** 
    * 构建请求体 (JSON body)
