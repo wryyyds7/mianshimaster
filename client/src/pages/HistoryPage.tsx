@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '../components/ui/Button';
-import { Search, Download, Eye, Trash2, Calendar, MessageSquare, FileText } from 'lucide-react';
+import Modal from '../components/ui/Modal';
+import { Search, Download, Eye, Trash2, Calendar, MessageSquare, FileText, AlertTriangle } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useSessionStore } from '../stores/sessionStore';
 import type { ISession } from '@shared/types';
@@ -9,6 +10,7 @@ export default function HistoryPage() {
   const { historySessions, deleteHistorySession, clearHistory } = useSessionStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSession, setSelectedSession] = useState<ISession | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const filteredSessions = useMemo(
     () =>
@@ -57,7 +59,7 @@ export default function HistoryPage() {
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">历史记录</h1>
           {historySessions.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={clearHistory} className="text-red-500 hover:text-red-700">
+            <Button variant="ghost" size="sm" onClick={() => setShowClearConfirm(true)} className="text-red-500 hover:text-red-700">
               清空全部
             </Button>
           )}
@@ -189,6 +191,38 @@ export default function HistoryPage() {
           )}
         </div>
       </div>
+
+      {/* 清空全部确认弹窗 */}
+      <Modal
+        open={showClearConfirm}
+        onClose={() => setShowClearConfirm(false)}
+        title="清空全部历史记录"
+      >
+        <div className="p-6">
+          <div className="flex items-start gap-3 mb-6">
+            <AlertTriangle className="w-6 h-6 text-red-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">
+                确定要清空所有历史记录吗？
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                此操作将永久删除全部 {historySessions.length} 条会话记录，不可撤销。
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowClearConfirm(false)}>
+              取消
+            </Button>
+            <Button
+              onClick={() => { clearHistory(); setShowClearConfirm(false); }}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              确认清空
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

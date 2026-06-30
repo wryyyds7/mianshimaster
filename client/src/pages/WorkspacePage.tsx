@@ -7,7 +7,7 @@ import FileUploader from '../components/workspace/FileUploader';
 import QuestionList from '../components/workspace/QuestionList';
 import ChatDetail from '../components/workspace/ChatDetail';
 import { aiService } from '../services/aiService';
-import { LogOut, Upload, FileText } from 'lucide-react';
+import { LogOut, Upload, FileText, AlertTriangle, XCircle } from 'lucide-react';
 import type { IFileInfo } from '@shared/types';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -22,6 +22,8 @@ export default function WorkspacePage() {
 
   const { localApi, apiMode, serverApi } = useConfigStore();
   const [showEntrance, setShowEntrance] = useState(!isActive);
+  const [aiError, setAiError] = useState<string | null>(null);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   // 进入工作台
   const handleEnterWorkspace = (files: IFileInfo[], text: string) => {
@@ -31,13 +33,17 @@ export default function WorkspacePage() {
 
   // 退出工作台
   const handleExit = () => {
-    // 如果正在流式输出，取消
+    setShowExitConfirm(true);
+  };
+
+  const confirmExit = () => {
     if (isStreaming) {
       cancelStreaming();
     }
-    // TODO: 保存会话到本地/服务器
     exitWorkspace();
     setShowEntrance(true);
+    setShowExitConfirm(false);
+    setAiError(null);
   };
 
   // 新增问题（模拟提问者提交）
@@ -45,6 +51,7 @@ export default function WorkspacePage() {
     const question = addQuestion(title, content);
 
     // 触发AI回答 — 根据模式选择不同路径
+    setAiError(null); // 清除之前的错误
     startStreaming(question.id);
 
     if (apiMode === 'server' && serverApi.token) {
@@ -71,11 +78,13 @@ export default function WorkspacePage() {
         },
         (error) => {
           cancelStreaming();
-          console.error('服务器AI回答失败:', error);
+          const msg = error instanceof Error ? error.message : String(error);
+          setAiError(`AI 回答失败：${msg}`);
         },
       ).catch((err) => {
-        console.error('AI流式对话未预期错误:', err);
-        if (isStreaming) cancelStreaming();
+        cancelStreaming();
+        const msg = err instanceof Error ? err.message : String(err);
+        setAiError(`AI 连接异常：${msg}`);
       });
     } else {
       // 本地模式：直连AI API
@@ -98,11 +107,13 @@ export default function WorkspacePage() {
         },
         (error) => {
           cancelStreaming();
-          console.error('AI回答失败:', error);
+          const msg = error instanceof Error ? error.message : String(error);
+          setAiError(`AI 回答失败：${msg}`);
         },
       ).catch((err) => {
-        console.error('AI流式对话未预期错误:', err);
-        if (isStreaming) cancelStreaming();
+        cancelStreaming();
+        const msg = err instanceof Error ? err.message : String(err);
+        setAiError(`AI 连接异常：${msg}`);
       });
     }
   }, [apiMode, localApi, serverApi, contextText, isStreaming, addQuestion, startStreaming, appendStreamChunk, endStreaming, cancelStreaming]);
@@ -127,6 +138,37 @@ export default function WorkspacePage() {
             上传背景文件并开始
           </Button>
         </div>
+
+        {/* 退出确认弹窗 */}
+        <Modal
+          open={showExitConfirm}
+          onClose={() => setShowExitConfirm(false)}
+          title="退出工作台"
+        >
+          <div className="p-6">
+            <div className="flex items-start gap-3 mb-6">
+              <AlertTriangle className="w-6 h-6 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">
+                  确定要退出工作台吗？
+                </p>
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  {questions.length > 0
+                    ? `当前有 ${questions.length} 个问答记录，退出后将自动保存到历史记录。`
+                    : '当前没有问答记录，退出后不会保存。'}
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+                取消
+              </Button>
+              <Button onClick={confirmExit} className="bg-red-500 hover:bg-red-600">
+                确认退出
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* 文件上传弹窗 */}
         <Modal
@@ -175,6 +217,20 @@ export default function WorkspacePage() {
         </div>
       </div>
 
+      {/* AI 错误提示条 */}
+      {aiError && (
+        <div className="px-4 py-3 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 flex items-start gap-3 shrink-0">
+          <XCircle className="w-5 h-5 text-red-500 dark:text-red-400 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-700 dark:text-red-300 flex-1">{aiError}</p>
+          <button
+            onClick={() => setAiError(null)}
+            className="text-red-400 hover:text-red-600 dark:hover:text-red-300 shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* 主体：左侧问题列表 + 右侧对话详情 */}
       <div className="flex-1 flex overflow-hidden">
         {/* 左侧 - 问题列表 (30%) */}
@@ -197,6 +253,37 @@ export default function WorkspacePage() {
           />
         </div>
       </div>
+
+      {/* 退出确认弹窗（工作台内） */}
+      <Modal
+        open={showExitConfirm}
+        onClose={() => setShowExitConfirm(false)}
+        title="退出工作台"
+      >
+        <div className="p-6">
+          <div className="flex items-start gap-3 mb-6">
+            <AlertTriangle className="w-6 h-6 text-amber-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-gray-900 dark:text-gray-100 font-medium mb-1">
+                确定要退出工作台吗？
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {questions.length > 0
+                  ? `当前有 ${questions.length} 个问答记录，退出后将自动保存到历史记录。`
+                  : '当前没有问答记录，退出后不会保存。'}
+              </p>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowExitConfirm(false)}>
+              取消
+            </Button>
+            <Button onClick={confirmExit} className="bg-red-500 hover:bg-red-600">
+              确认退出
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
