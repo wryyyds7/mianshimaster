@@ -257,6 +257,30 @@ main          ← 生产分支（受保护）
 
 ## 七、更新日志
 
+### 2026年6月30日11时 - 修复窗口关闭按钮失效（preload路径错误）
+
+**问题：** Electron 窗口右上角 ✕ 按钮（以及最小化/最大化按钮）点击无效，无法关闭应用。
+
+**根因：** `electron-vite` 因项目的 `"type": "module"` 将 preload 编译为 `out/preload/index.mjs`，
+但 `main.ts` 的 `preload` 路径写的是 `../preload/index.js`——文件不存在，
+`contextBridge` 未能注册，`window.electronAPI` 始终为 `undefined`，所有窗口控制按钮静默失效。
+
+**修复：**
+| 文件 | 修改 |
+|------|------|
+| `electron/main.ts` | `preload` 路径 `index.js` → `index.mjs` |
+| `electron.vite.config.ts` | 新增 `output.entryFileNames: '[name].js'` 防止再次出现 |
+| `out/main/index.js` | 编译产物同步更新 |
+
+**根因分析链：**
+```
+"type": "module" → electron-vite 输出 .mjs
+→ main.ts 加载 ../preload/index.js（不存在）
+→ preload 未执行 → electronAPI 为 undefined
+→ TitleBar.tsx 中 electronAPI?.window.close() 不执行
+→ 所有按钮（最小化/最大化/关闭）全部失效
+```
+
 ### 2026年6月30日11时 - 首页新增API测试入口
 
 **改进：**

@@ -13,7 +13,7 @@ function createWindow(): void {
     frame: false,              // 无边框窗口（自定义标题栏）
     titleBarStyle: 'hidden',
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false,

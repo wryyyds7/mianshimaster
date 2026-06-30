@@ -21,6 +21,9 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'electron/preload.ts'),
         },
+        output: {
+          entryFileNames: '[name].js',  // 强制 .js 避免 .mjs 导致 main 进程加载失败
+        },
         external: ['better-sqlite3'],
       },
     },
