@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
-import { MessageSquare, BookOpen, History, Settings, ArrowRight } from 'lucide-react';
+import { MessageSquare, BookOpen, History, Settings, ArrowRight, Wifi } from 'lucide-react';
 import { useConfigStore } from '../stores/configStore';
+import ApiTestPanel from '../components/settings/ApiTestPanel';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -60,6 +61,20 @@ export default function HomePage() {
               管理知识库
             </Button>
           </div>
+        </div>
+
+        {/* API 测试卡片——醒目入口 */}
+        <div className="mb-6 p-5 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-xl border-2 border-amber-300 dark:border-amber-700 shadow-md">
+          <div className="flex items-center gap-2 mb-1">
+            <Wifi className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <h2 className="text-base font-bold text-amber-800 dark:text-amber-300">
+              进行 API 测试
+            </h2>
+          </div>
+          <p className="text-sm text-amber-600 dark:text-amber-400 mb-3">
+            在使用前验证 API 连通性，确保 LLM 大模型和 STT 语音识别均可正常调用
+          </p>
+          <ApiTestPanel className="!border-0 !p-0 !bg-transparent shadow-none" />
         </div>
 
         {/* 功能卡片 */}
