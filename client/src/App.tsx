@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useConfigStore } from './stores/configStore';
 import AppLayout from './components/layout/AppLayout';
 import { Spinner } from './components/ui/Spinner';
@@ -22,6 +22,10 @@ function App() {
 
   // 检查是否已配置（本地API填写了Key 或 服务器已登录）
   const canAccess = apiKey.length > 0 || isLoggedIn;
+
+  // 手动关闭弹窗状态：用户点击 X / 遮罩时临时隐藏弹窗
+  const [dismissed, setDismissed] = useState(false);
+  const showConfigModal = !canAccess && !dismissed;
 
   return (
     <>
@@ -49,21 +53,22 @@ function App() {
         </Routes>
       </Suspense>
 
-      {/* 未配置弹窗 */}
-      {!canAccess && (
+      {/* 未配置弹窗：X按钮 + 点击遮罩均可关闭 */}
+      {showConfigModal && (
         <Modal
           open={true}
-          onClose={() => {}}
+          onClose={() => setDismissed(true)}
           title="欢迎使用面试大师"
-          showClose={false}
+          showClose={true}
         >
           <div className="space-y-4 p-4">
-            <p className="text-gray-600 dark:text-gray-400">
-              请配置好您的API信息或者进行登录
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              请配置 LLM 和语音识别 API 信息（保存后自动关闭）
             </p>
-            <div className="flex gap-3">
-              <ApiConfigForm mode="dialog" />
-            </div>
+            <ApiConfigForm
+              mode="dialog"
+              onSaved={() => setDismissed(true)}
+            />
           </div>
         </Modal>
       )}

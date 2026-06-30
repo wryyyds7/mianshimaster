@@ -307,6 +307,16 @@ main          ← 生产分支（受保护）
 → 请求到达 Express 服务器（端口3001）→ 路由处理 → 返回响应
 ```
 
+### 2026年6月30日 - API配置弹窗双路关闭 + STT双Key配置
+
+**问题：** 启动应用后弹出 API 配置窗口，但(1)只配了LLM Key没有STT Key，(2)弹窗无X按钮且遮罩不可点，无法关闭
+**修复：**
+- **ApiConfigForm** 拆分为两个区块：LLM 大模型配置（API Key / Base URL / 模型）+ STT 语音识别配置（提供商 / API Key）
+- **App.tsx** 新增 `dismissed` 状态，支持三种关闭路径：
+  1. 右上角 ✕ 按钮 → `showClose={true}` → `onClose={() => setDismissed(true)}`
+  2. 点击遮罩（背景半透明层）→ Modal 组件已内置 `onClick` 关闭
+  3. 保存配置后自动关闭 → `onSaved` 回调 800ms 后自动隐藏弹窗
+
 ### 2026年6月30日 - AI Agent 面试系统实现
 
 **架构概述：**
