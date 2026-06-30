@@ -3,6 +3,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useConfigStore } from './stores/configStore';
 import AppLayout from './components/layout/AppLayout';
 import { Spinner } from './components/ui/Spinner';
+import ErrorBoundary from './components/ui/ErrorBoundary';
 import Modal from './components/ui/Modal';
 import ApiConfigForm from './components/settings/ApiConfigForm';
 import LoginPage from './pages/LoginPage';
@@ -38,14 +39,14 @@ function App() {
           {/* 登录页面（独立路由，无边栏） */}
           <Route path="/login" element={<LoginPage />} />
 
-          {/* 主应用路由（带侧边栏布局） */}
+          {/* 主应用路由（带侧边栏布局 + 错误边界） */}
           <Route element={<AppLayout />}>
-            <Route index element={<HomePage />} />
-            <Route path="workspace" element={<WorkspacePage />} />
-            <Route path="history" element={<HistoryPage />} />
-            <Route path="knowledge" element={<KnowledgeBasePage />} />
-            <Route path="settings" element={<SettingsPage />} />
-            <Route path="contact" element={<ContactPage />} />
+            <Route index element={<ErrorBoundary><HomePage /></ErrorBoundary>} />
+            <Route path="workspace" element={<ErrorBoundary><WorkspacePage /></ErrorBoundary>} />
+            <Route path="history" element={<ErrorBoundary><HistoryPage /></ErrorBoundary>} />
+            <Route path="knowledge" element={<ErrorBoundary><KnowledgeBasePage /></ErrorBoundary>} />
+            <Route path="settings" element={<ErrorBoundary><SettingsPage /></ErrorBoundary>} />
+            <Route path="contact" element={<ErrorBoundary><ContactPage /></ErrorBoundary>} />
           </Route>
 
           {/* 未匹配路由重定向 */}

@@ -1,23 +1,25 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/Button';
 import { cn } from '../utils/cn';
 import { useConfigStore } from '../stores/configStore';
 import { useSessionStore } from '../stores/sessionStore';
 import { useKnowledgeStore } from '../stores/knowledgeStore';
 import { DEFAULT_MODELS, API_PROVIDERS } from '../utils/constants';
-import { Server, Key, Globe, Cpu, Languages, Download, Database } from 'lucide-react';
+import { Server, Key, Globe, Cpu, Languages, Download, Database, ArrowLeft, Mic } from 'lucide-react';
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const {
-    apiMode, localApi, serverApi, language, theme,
-    setApiMode, updateLocalApiConfig, setServerUrl, setTheme, setLanguage,
+    apiMode, localApi, serverApi, sttApi, language, theme,
+    setApiMode, updateLocalApiConfig, setTheme, setLanguage, updateSTTConfig,
   } = useConfigStore();
 
   const { historySessions } = useSessionStore();
   const { items: knowledgeItems } = useKnowledgeStore();
 
   const [showApiKey, setShowApiKey] = useState(false);
-  const [serverUrl, setLocalServerUrl] = useState(serverApi.baseUrl);
+  const [showSttApiKey, setShowSttApiKey] = useState(false);
 
   // 导出全部数据
   const handleExportAll = () => {
@@ -43,78 +45,99 @@ export default function SettingsPage() {
   return (
     <div className="h-full overflow-y-auto custom-scrollbar">
       <div className="max-w-2xl mx-auto px-6 py-8 space-y-8">
+        {/* 返回按钮 */}
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          返回首页
+        </button>
+
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">设置</h1>
 
-        {/* 运行模式 */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+        {/* ========== API 来源选择 ========== */}
+        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Server className="w-5 h-5" />
-            运行模式
+            API 来源
           </h2>
           <div className="flex rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
             <button
               onClick={() => setApiMode('local')}
               className={cn(
-                'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+                'flex-1 py-2.5 text-sm font-medium rounded-md transition-colors',
                 apiMode === 'local'
                   ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
-              <Key className="w-4 h-4 inline mr-1" />
-              本地API
+              <Key className="w-4 h-4 inline mr-1.5" />
+              自己配置 API
             </button>
             <button
               onClick={() => setApiMode('server')}
               className={cn(
-                'flex-1 py-2 text-sm font-medium rounded-md transition-colors',
+                'flex-1 py-2.5 text-sm font-medium rounded-md transition-colors',
                 apiMode === 'server'
                   ? 'bg-white dark:bg-gray-600 text-indigo-600 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
               )}
             >
-              <Server className="w-4 h-4 inline mr-1" />
-              服务器API
+              <Server className="w-4 h-4 inline mr-1.5" />
+              使用服务器
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-2">
-            本地API优先使用，也可在登录后切换为服务器API
+          <p className="text-xs text-gray-400">
+            {apiMode === 'local'
+              ? '使用自己的 LLM 和 STT API Key，完全掌控用量'
+              : '无需配置，使用服务器端提供的 API（需要登录）'}
           </p>
         </section>
 
-        {/* 服务器模式设置 */}
+        {/* ========== 服务器模式（仅显示登录状态）========== */}
         {apiMode === 'server' && (
           <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Server className="w-5 h-5" />
-              服务器配置
+              服务器状态
             </h2>
-            <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">服务器地址</label>
-              <input
-                type="text"
-                value={serverUrl}
-                onChange={(e) => setLocalServerUrl(e.target.value)}
-                onBlur={() => setServerUrl(serverUrl.trim() || 'http://localhost:3001')}
-                placeholder="http://localhost:3001"
-                className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <p className="text-xs text-gray-400">
-              {serverApi.isLoggedIn ? `已登录: ${serverApi.user?.username || ''}` : '未登录，请前往登录页面'}
-            </p>
+            {serverApi.isLoggedIn ? (
+              <div className="flex items-center gap-3 p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
+                <div className="w-10 h-10 rounded-full bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-emerald-700 font-bold text-sm">
+                  {serverApi.user?.username?.[0]?.toUpperCase() || 'U'}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                    已登录: {serverApi.user?.username || '用户'}
+                  </p>
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400">
+                    使用服务器 API 无需额外配置
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-4 space-y-3">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  使用服务器 API 需要先登录账号
+                </p>
+                <Button onClick={() => navigate('/login')} size="sm">
+                  前往登录
+                </Button>
+              </div>
+            )}
           </section>
         )}
 
-        {/* 本地API配置 */}
+        {/* ========== 自己配置模式：LLM API ========== */}
         {apiMode === 'local' && (
           <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <Key className="w-5 h-5" />
-              本地API配置
+              LLM 大模型 API
             </h2>
 
-            {/* 模型提供商 */}
+            {/* 提供商 */}
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">提供商</label>
               <select
@@ -198,27 +221,83 @@ export default function SettingsPage() {
           </section>
         )}
 
-        {/* 语音识别设置 */}
-        <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">语音识别 (STT)</h2>
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">提供商</label>
-            <select
-              value={useConfigStore(s => s.sttApi.provider)}
-              onChange={(e) => useConfigStore.getState().updateSTTConfig({ provider: e.target.value as any })}
-              className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="web-speech">浏览器内置 (免费)</option>
-              <option value="openai-whisper">OpenAI Whisper</option>
-              <option value="tencent-asr">腾讯云 ASR</option>
-            </select>
-          </div>
-          <p className="text-xs text-gray-400">
-            用于 Agent 模拟面试的语音输入，浏览器内置方案免费无需 API Key
-          </p>
-        </section>
+        {/* ========== 自己配置模式：STT 语音识别 ========== */}
+        {apiMode === 'local' && (
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <Mic className="w-5 h-5" />
+              语音识别 (STT)
+            </h2>
 
-        {/* 外观设置 */}
+            {/* STT 提供商 */}
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">提供商</label>
+              <select
+                value={sttApi.provider}
+                onChange={(e) => updateSTTConfig({ provider: e.target.value as any })}
+                className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="web-speech">浏览器内置 (免费)</option>
+                <option value="openai-whisper">OpenAI Whisper</option>
+                <option value="tencent-asr">腾讯云 ASR</option>
+              </select>
+            </div>
+
+            {/* STT API Key — 浏览器内置不需要 */}
+            {sttApi.provider !== 'web-speech' && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  STT API Key
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSttApiKey ? 'text' : 'password'}
+                    value={sttApi.apiKey}
+                    onChange={(e) => updateSTTConfig({ apiKey: e.target.value })}
+                    placeholder={sttApi.provider === 'openai-whisper' ? 'sk-...' : '腾讯云 SecretId'}
+                    className="w-full h-10 px-3 pr-10 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  />
+                  <button
+                    onClick={() => setShowSttApiKey(!showSttApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    {showSttApiKey ? '隐藏' : '显示'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* STT Base URL — 浏览器内置不需要 */}
+            {sttApi.provider !== 'web-speech' && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <Globe className="w-3.5 h-3.5" />
+                  接口地址
+                </label>
+                <input
+                  type="text"
+                  value={sttApi.baseUrl}
+                  onChange={(e) => updateSTTConfig({ baseUrl: e.target.value })}
+                  placeholder={
+                    sttApi.provider === 'openai-whisper'
+                      ? 'https://api.openai.com/v1/audio/transcriptions'
+                      : 'https://asr.tencentcloudapi.com'
+                  }
+                  className="w-full h-10 px-3 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+            )}
+            <p className="text-xs text-gray-400">
+              {sttApi.provider === 'web-speech'
+                ? '浏览器内置方案免费无需 API Key，中文识别效果一般'
+                : sttApi.provider === 'openai-whisper'
+                  ? 'Whisper 识别准确率高，需要 OpenAI API Key'
+                  : '腾讯云 ASR 中文效果最佳，需要腾讯云账号'}
+            </p>
+          </section>
+        )}
+
+        {/* ========== 外观与语言 ========== */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">外观与语言</h2>
 
@@ -266,7 +345,7 @@ export default function SettingsPage() {
           </div>
         </section>
 
-        {/* 数据管理 */}
+        {/* ========== 数据管理 ========== */}
         <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
             <Database className="w-5 h-5" />

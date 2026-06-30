@@ -3,8 +3,8 @@
  * 独立组件，与现有 ChatDetail 解耦
  */
 import React, { useState, useRef, useEffect } from 'react';
-import { Button } from '../components/ui/Button';
-import { cn } from '../utils/cn';
+import { Button } from '../ui/Button';
+import { cn } from '../../utils/cn';
 import {
   Send,
   Mic,
