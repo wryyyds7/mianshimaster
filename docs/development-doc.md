@@ -257,6 +257,33 @@ main          ← 生产分支（受保护）
 
 ## 七、更新日志
 
+### 2026年7月1日09时 - LLM API测试增加原始响应调试与兜底解析
+
+**问题：** LLM 大模型 API 测试报错「API 返回了空内容，请检查模型名称是否正确」，但没有显示原始响应数据，无法定位具体原因。
+
+**根因分析：**
+- HTTP 200 响应已到达，JSON 解析成功
+- 但适配器的 `parseResponse()` 返回空字符串——意味着响应结构与适配器预期不匹配
+- 可能原因：API 代理包装了响应、模型名错误导致服务端静默返回空、非标格式等
+
+**修复：**
+
+| 文件 | 变更 |
+|------|------|
+| `apiTestService.ts` | ① 新增 `console.log` 调试输出（请求URL/头/体 + 原始响应）② 新增 `smartParseContent()` 兜底解析器（支持7种常见响应格式 + 递归 data/response/result 嵌套）③ 新增 `buildModelSuggestion()` 智能提示（Gemini 安全过滤、OpenAI error 等）④ 错误消息现在包含原始响应内容（截断300字符） |
+| `ApiTestPanel.tsx` | LLM 错误消息增加 `whitespace-pre-wrap break-all`，支持多行和长文本展示 |
+
+**兜底解析器支持的格式：**
+```
+1) OpenAI 兼容   { choices: [{ message: { content } }] }
+2) 裸字段        { content: "..." } / { text: "..." }
+3) Gemini        { candidates: [{ content: { parts: [{ text }] } }] }
+4) Anthropic     { content: [{ type: "text", text: "..." }] }
+5) Ollama        { message: { content: "..." } }
+6) 嵌套 data     { data: { choices: [...] } }
+7) response/result 包装  { response: { ... } }
+```
+
 ### 2026年6月30日11时 - 修复窗口关闭按钮失效（preload路径错误）
 
 **问题：** Electron 窗口右上角 ✕ 按钮（以及最小化/最大化按钮）点击无效，无法关闭应用。

@@ -58,6 +58,12 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
       ...authHeaders,
     };
 
+    // ---- 调试：打印请求详情 ----
+    console.log('[API测试] 请求URL:', endpoint);
+    console.log('[API测试] 请求头:', JSON.stringify(headers, null, 2));
+    console.log('[API测试] 请求体:', JSON.stringify(requestBody, null, 2));
+    console.log('[API测试] 提供商:', provider, '适配器:', adapter.provider);
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
@@ -83,17 +89,42 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
           errMsg = `HTTP ${response.status}: ${errorBody.slice(0, 100)}`;
         }
       }
+      console.log('[API测试] 失败响应体:', errorBody.slice(0, 500));
       return { success: false, latencyMs, message: errMsg, model: config.model, provider: config.provider };
     }
 
-    const data = await response.json();
-    const content = adapter.parseResponse(data);
+    const rawText = await response.text().catch(() => '');
+    console.log('[API测试] 成功响应体(前500字符):', rawText.slice(0, 500));
 
-    if (!content) {
+    let data: unknown;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
       return {
         success: false,
         latencyMs,
-        message: 'API 返回了空内容，请检查模型名称是否正确',
+        message: `响应不是有效 JSON: ${rawText.slice(0, 150)}`,
+        model: config.model,
+        provider: config.provider,
+      };
+    }
+
+    // 适配器解析
+    const content = adapter.parseResponse(data);
+
+    // ---- 兜底：自适应解析常见格式 ----
+    if (!content) {
+      const fallback = smartParseContent(data);
+      console.log('[API测试] 适配器解析为空，兜底解析结果:', fallback ? fallback.slice(0, 100) : '(空)');
+      console.log('[API测试] 响应数据结构:', JSON.stringify(data).slice(0, 500));
+
+      const rawSnippet = JSON.stringify(data).slice(0, 300);
+      const modelSuggestion = buildModelSuggestion(provider, data);
+
+      return {
+        success: false,
+        latencyMs,
+        message: `API 返回了空内容。\n原始响应(截断): ${rawSnippet}${modelSuggestion}`,
         model: config.model,
         provider: config.provider,
       };
@@ -125,6 +156,78 @@ export async function testLlmApi(config: ILocalApiConfig): Promise<ApiTestResult
       provider: config.provider,
     };
   }
+}
+
+// ============ 兜底智能解析 ============
+
+/**
+ * 当适配器 parseResponse 返回空时，尝试多种常见响应格式提取内容。
+ * 用于兼容 API 代理、非标准接口等场景。
+ */
+function smartParseContent(data: unknown): string {
+  const d = data as any;
+  if (!d || typeof d !== 'object') return '';
+
+  // 1) OpenAI 兼容 { choices: [{ message: { content } }] }
+  const c1 = d?.choices?.[0]?.message?.content;
+  if (c1) return String(c1);
+
+  // 2) 裸 content / text 字段
+  if (typeof d?.content === 'string') return d.content;
+  if (typeof d?.text === 'string') return d.text;
+
+  // 3) Gemini { candidates: [{ content: { parts: [{ text }] } }] }
+  const parts = d?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts)) {
+    const t = parts.map((p: any) => p.text || '').join('');
+    if (t) return t;
+  }
+
+  // 4) Anthropic { content: [{ type: 'text', text: ... }] }
+  if (Array.isArray(d?.content)) {
+    const t = d.content
+      .filter((b: any) => b.type === 'text')
+      .map((b: any) => b.text)
+      .join('');
+    if (t) return t;
+  }
+
+  // 5) Ollama { message: { content } }
+  if (d?.message?.content) return String(d.message.content);
+
+  // 6) 嵌套在 data 字段内
+  if (d?.data && typeof d.data === 'object') {
+    return smartParseContent(d.data);
+  }
+
+  // 7) response / result 字段（某些代理）
+  if (d?.response && typeof d.response === 'object') {
+    return smartParseContent(d.response);
+  }
+  if (d?.result && typeof d.result === 'object') {
+    return smartParseContent(d.result);
+  }
+
+  return '';
+}
+
+/**
+ * 根据原始响应构建模型建议提示
+ */
+function buildModelSuggestion(provider: string, data: unknown): string {
+  const d = data as any;
+  // Gemini 特有: 若返回 candidates 为空或 safetyRatings 阻止
+  if (d?.candidates && d.candidates.length === 0) {
+    if (d?.promptFeedback?.blockReason) {
+      return `\n[被阻止: ${d.promptFeedback.blockReason}]`;
+    }
+    return '\n[提示: candidates 为空，可能是安全过滤或模型不存在]';
+  }
+  // OpenAI 兼容: 若返回 error 信息但 HTTP 却是 200
+  if (d?.error?.message) {
+    return `\n[服务端错误: ${d.error.message}]`;
+  }
+  return '';
 }
 
 /**
